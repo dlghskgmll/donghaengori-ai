@@ -1,0 +1,32 @@
+[
+  {
+    "person_id": "P001",
+    "mobility_notes": ["보행 속도가 느림", "지팡이 사용", "계단 이동 시 부축 필요"],
+    "preferences": ["오전 진료 선호"],
+    "contact_notes": []
+  },
+  {
+    "person_id": "P002",
+    "mobility_notes": ["장거리 이동 시 휴식 필요 여부 확인"],
+    "preferences": ["병원명과 날짜를 비교적 명확하게 전달함"],
+    "contact_notes": []
+  },
+  {
+    "person_id": "P003",
+    "mobility_notes": ["시야 불편 여부와 이동 동선 사전 확인"],
+    "preferences": ["‘눈 보던 데’라는 표현을 자주 사용"],
+    "contact_notes": []
+  },
+  {
+    "person_id": "P004",
+    "mobility_notes": ["휠체어 사용", "차량 탑승 보조 및 무장애 동선 확인 필요"],
+    "preferences": [],
+    "contact_notes": ["보호자가 대신 전화하는 경우가 많음"]
+  },
+  {
+    "person_id": "P005",
+    "mobility_notes": ["이동 지원 필요 사항 미등록"],
+    "preferences": [],
+    "contact_notes": ["신규 등록 대상자 — 과거 동행 이력 없음"]
+  }
+]

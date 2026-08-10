@@ -1,0 +1,37 @@
+[
+  {
+    "person_id": "P001",
+    "name": "박순자",
+    "phone": "010-1111-1111",
+    "birth_year": 1947,
+    "address": "전남 순천시 별량면"
+  },
+  {
+    "person_id": "P002",
+    "name": "김영자",
+    "phone": "010-2222-2222",
+    "birth_year": 1945,
+    "address": "전남 고흥군"
+  },
+  {
+    "person_id": "P003",
+    "name": "이춘자",
+    "phone": "010-3333-3333",
+    "birth_year": 1942,
+    "address": "전남 보성군"
+  },
+  {
+    "person_id": "P004",
+    "name": "최복례",
+    "phone": "010-4444-4444",
+    "birth_year": 1950,
+    "address": "전남 해남군"
+  },
+  {
+    "person_id": "P005",
+    "name": "문정자",
+    "phone": "010-5555-5555",
+    "birth_year": 1946,
+    "address": "전남 장흥군"
+  }
+]

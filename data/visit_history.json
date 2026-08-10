@@ -1,0 +1,58 @@
+[
+  {
+    "visit_id": "V001",
+    "person_id": "P001",
+    "visited_at": "2026-07-21",
+    "hospital_name": "순천가상정형외과",
+    "department": "정형외과",
+    "reason": "무릎 통증"
+  },
+  {
+    "visit_id": "V002",
+    "person_id": "P001",
+    "visited_at": "2026-05-12",
+    "hospital_name": "순천가상정형외과",
+    "department": "정형외과",
+    "reason": "무릎 통증 경과 확인"
+  },
+  {
+    "visit_id": "V003",
+    "person_id": "P001",
+    "visited_at": "2026-03-03",
+    "hospital_name": "순천가상정형외과",
+    "department": "정형외과",
+    "reason": "무릎 통증"
+  },
+  {
+    "visit_id": "V004",
+    "person_id": "P002",
+    "visited_at": "2026-06-18",
+    "hospital_name": "고흥가상내과",
+    "department": "내과",
+    "reason": "정기 진료"
+  },
+  {
+    "visit_id": "V005",
+    "person_id": "P003",
+    "visited_at": "2026-07-08",
+    "hospital_name": "보성가상안과",
+    "department": "안과",
+    "reason": "시력 및 안구 상태 정기 확인"
+  },
+  {
+    "visit_id": "V006",
+    "person_id": "P003",
+    "visited_at": "2026-04-10",
+    "hospital_name": "보성가상안과",
+    "department": "안과",
+    "reason": "눈 불편감"
+  },
+  {
+    "visit_id": "V007",
+    "person_id": "P004",
+    "visited_at": "2026-06-02",
+    "hospital_name": "해남가상병원",
+    "department": "재활의학과",
+    "reason": "정기 진료"
+  }
+]
