@@ -1387,3 +1387,45 @@ button:disabled {
   font-size: 11px;
   line-height: 1.5;
 }
+
+.voice-recording-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-button-cancel {
+  border-color: var(--line-strong);
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.voice-button-cancel:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.voice-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid #cde4d8;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1.5;
+}

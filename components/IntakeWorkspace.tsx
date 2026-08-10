@@ -107,7 +107,12 @@ export function IntakeWorkspace() {
                 <LoaderCircle className="spin" size={26} aria-hidden="true" />
               </div>
               <h2>요청 내용을 구조화하고 있습니다</h2>
-              <p>가상 프로필과 과거 동행 이력을 확인하는 중입니다.</p>
+              <p>
+                AI가 발화 내용과 과거 동행 기록(Care Memory)을 확인하고
+                있습니다.
+                <br />
+                실제 AI 분석은 최대 30초 정도 걸릴 수 있습니다.
+              </p>
               <div className="loading-lines" aria-hidden="true">
                 <span />
                 <span />

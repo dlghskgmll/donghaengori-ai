@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { ArrowRight, FlaskConical, Phone, Sparkles } from "lucide-react";
 import { VoiceInput } from "./VoiceInput";
 
@@ -67,6 +67,8 @@ export function IntakeForm({ onAnalyze, isLoading, error }: IntakeFormProps) {
     await onAnalyze(values);
   };
 
+  const transcriptRef = useRef<HTMLTextAreaElement | null>(null);
+
   const handleTranscript = (transcript: string) => {
     setValues((current) => ({
       ...current,
@@ -74,6 +76,8 @@ export function IntakeForm({ onAnalyze, isLoading, error }: IntakeFormProps) {
         ? `${current.transcript.trimEnd()}\n${transcript}`
         : transcript,
     }));
+    // 변환 결과 위치를 바로 찾을 수 있도록 입력창에 포커스를 준다.
+    requestAnimationFrame(() => transcriptRef.current?.focus());
   };
 
   return (
@@ -116,6 +120,7 @@ export function IntakeForm({ onAnalyze, isLoading, error }: IntakeFormProps) {
             원문 발화
           </span>
           <textarea
+            ref={transcriptRef}
             rows={7}
             required
             placeholder="어르신 또는 보호자의 요청 내용을 그대로 입력하세요."
