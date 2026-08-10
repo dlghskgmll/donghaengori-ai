@@ -3,14 +3,17 @@
 import { useState } from "react";
 import { ClipboardCheck, Link2, LoaderCircle, ShieldCheck } from "lucide-react";
 import {
+  AnalyzeIntakeApiResponseSchema,
   IntakeAnalysisSchema,
   type IntakeAnalysis,
+  type IntakeResponseMeta,
 } from "@/lib/ai/schema";
 import { IntakeCard } from "./IntakeCard";
 import { IntakeForm, type IntakeFormValues } from "./IntakeForm";
 
 export function IntakeWorkspace() {
   const [analysis, setAnalysis] = useState<IntakeAnalysis | null>(null);
+  const [meta, setMeta] = useState<IntakeResponseMeta | null>(null);
   const [submittedTranscript, setSubmittedTranscript] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +41,13 @@ export function IntakeWorkspace() {
         throw new Error(message);
       }
 
-      const validated = IntakeAnalysisSchema.safeParse(payload);
+      const validated = AnalyzeIntakeApiResponseSchema.safeParse(payload);
       if (!validated.success) {
         throw new Error("AI 결과 검증에 실패했습니다. 담당자에게 알려 주세요.");
       }
 
-      setAnalysis(validated.data);
+      setAnalysis(IntakeAnalysisSchema.parse(validated.data));
+      setMeta(validated.data.meta ?? null);
       setSubmittedTranscript(values.transcript);
     } catch (caughtError) {
       setError(
@@ -111,11 +115,32 @@ export function IntakeWorkspace() {
               </div>
             </div>
           ) : analysis ? (
-            <IntakeCard
-              key={`${submittedTranscript}-${analysis.summary}`}
-              analysis={analysis}
-              transcript={submittedTranscript}
-            />
+            <div className="analysis-result-stack">
+              {meta?.fallback_used ? (
+                <div className="fallback-banner" role="status">
+                  실제 AI 연결에 실패하여 기본 분석 모드로 처리했습니다.
+                </div>
+              ) : null}
+              {meta ? (
+                <div className="provider-meta" aria-label="분석 provider와 처리시간">
+                  <span>
+                    Provider · {meta.fallback_used
+                      ? "Fallback"
+                      : meta.provider_used === "openai"
+                        ? "OpenAI"
+                        : "Mock"}
+                  </span>
+                  <span>
+                    처리시간 · {(meta.total_latency_ms / 1000).toFixed(1)}초
+                  </span>
+                </div>
+              ) : null}
+              <IntakeCard
+                key={`${submittedTranscript}-${analysis.summary}`}
+                analysis={analysis}
+                transcript={submittedTranscript}
+              />
+            </div>
           ) : (
             <div className="result-state empty-state">
               <div className="empty-visual" aria-hidden="true">

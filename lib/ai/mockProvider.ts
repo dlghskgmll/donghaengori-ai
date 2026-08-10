@@ -311,6 +311,10 @@ export function analyzeMockIntake(
     additional_requests: transcript.includes("약도")
       ? ["병원 위치 안내 요청"]
       : [],
+    proxy_request: {
+      detected: false,
+      relationship: null,
+    },
     care_context: { mobility_notes: careNotes },
     confirmation_questions: confirmationQuestions,
     safety: {

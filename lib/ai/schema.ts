@@ -62,6 +62,12 @@ export const IntakeAnalysisSchema = z.object({
     evidence: EvidenceSchema,
   }),
   additional_requests: z.array(z.string()),
+  proxy_request: z
+    .object({
+      detected: z.boolean(),
+      relationship: z.string().nullable(),
+    })
+    .optional(),
   care_context: z.object({
     mobility_notes: z.array(z.string()),
   }),
@@ -85,5 +91,38 @@ export const AnalyzeIntakeInputSchema = z.object({
     .optional(),
 });
 
+export const IntakeProviderModeSchema = z.enum(["mock", "openai", "auto"]);
+export const IntakeProviderNameSchema = z.enum(["mock", "openai"]);
+
+export const IntakeResponseMetaSchema = z.object({
+  requested_provider: IntakeProviderModeSchema,
+  provider_used: IntakeProviderNameSchema,
+  model: z.string().min(1).nullable(),
+  fallback_used: z.boolean(),
+  provider_latency_ms: z.number().finite().min(0),
+  total_latency_ms: z.number().finite().min(0),
+  warnings: z.array(z.string().min(1)),
+});
+
+export const AnalyzeIntakeResponseSchema = z.object({
+  intake_id: z.string().min(1),
+  status: z.literal("DRAFT_AI"),
+  analysis: IntakeAnalysisSchema,
+  meta: IntakeResponseMetaSchema,
+});
+
+export const AnalyzeIntakeApiResponseSchema = IntakeAnalysisSchema.extend({
+  intake_id: z.string().min(1).optional(),
+  status: z.literal("DRAFT_AI").optional(),
+  meta: IntakeResponseMetaSchema.optional(),
+});
+
 export type IntakeAnalysis = z.infer<typeof IntakeAnalysisSchema>;
 export type AnalyzeIntakeInput = z.infer<typeof AnalyzeIntakeInputSchema>;
+export type IntakeProviderMode = z.infer<typeof IntakeProviderModeSchema>;
+export type IntakeProviderName = z.infer<typeof IntakeProviderNameSchema>;
+export type IntakeResponseMeta = z.infer<typeof IntakeResponseMetaSchema>;
+export type AnalyzeIntakeResponse = z.infer<typeof AnalyzeIntakeResponseSchema>;
+export type AnalyzeIntakeApiResponse = z.infer<
+  typeof AnalyzeIntakeApiResponseSchema
+>;

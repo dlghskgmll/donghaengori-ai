@@ -565,6 +565,32 @@ button:disabled {
   width: 91%;
 }
 
+.analysis-result-stack {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.provider-meta {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 0 2px 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.fallback-banner {
+  margin-bottom: 8px;
+  padding: 9px 12px;
+  border: 1px solid #ead2aa;
+  border-radius: 9px;
+  background: #fff7e8;
+  color: #81591d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .result-card {
   max-width: 980px;
   margin: 0 auto;

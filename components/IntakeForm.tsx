@@ -73,7 +73,7 @@ export function IntakeForm({ onAnalyze, isLoading, error }: IntakeFormProps) {
           <p className="eyebrow">NEW INTAKE</p>
           <h1 id="intake-heading">병원동행 접수 분석</h1>
         </div>
-        <span className="phase-chip">Phase 1 · Mock</span>
+        <span className="phase-chip">Phase 2 · Intake AI</span>
       </div>
 
       <form onSubmit={handleSubmit} className="intake-form">

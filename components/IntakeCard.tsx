@@ -54,7 +54,7 @@ function ConfidenceRing({ value }: { value: number }) {
     <div
       className="confidence-ring"
       style={{ "--confidence": `${percentage * 3.6}deg` } as React.CSSProperties}
-      aria-label={`AI 확신도 ${percentage}%`}
+      aria-label={`근거 신뢰도 ${percentage}%`}
     >
       <span>{percentage}</span>
       <small>%</small>
@@ -107,7 +107,9 @@ function DataField({
           {value}
         </div>
       )}
-      <div className="confidence-inline">확신도 {Math.round(confidence * 100)}%</div>
+      <div className="confidence-inline">
+        근거 신뢰도 {Math.round(confidence * 100)}%
+      </div>
       <EvidenceList items={evidence} />
     </div>
   );

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { analyzeIntake } from "../lib/ai/analyzeIntake";
+import { MockIntakeAnalysisProvider } from "../lib/ai/provider";
 import { IntakeAnalysisSchema } from "../lib/ai/schema";
 import { fixtures } from "./fixtures";
 
 describe("동행고리AI mock intake analyzer", () => {
+  const analyzeMock = (input: unknown) =>
+    analyzeIntake(input, new MockIntakeAnalysisProvider());
+
   it("CASE 1: 명확한 발화를 확인된 접수 정보로 구조화한다", async () => {
-    const result = await analyzeIntake(fixtures.case1);
+    const result = await analyzeMock(fixtures.case1);
 
     expect(result.caller.person_candidates[0]?.name).toBe("김영자");
     expect(result.appointment.date).toMatchObject({
@@ -28,7 +32,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 2: 저번 병원 표현을 방문 이력과 결합해 후보로만 제시한다", async () => {
-    const result = await analyzeIntake(fixtures.case2);
+    const result = await analyzeMock(fixtures.case2);
     const hospital = result.hospital.candidates[0];
 
     expect(result.caller.person_candidates[0]?.name).toBe("박순자");
@@ -51,7 +55,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 3: 과거 이력이 없으면 병원을 임의로 만들지 않는다", async () => {
-    const result = await analyzeIntake(fixtures.case3);
+    const result = await analyzeMock(fixtures.case3);
 
     expect(result.caller.person_candidates[0]?.name).toBe("문정자");
     expect(result.hospital.candidates).toEqual([]);
@@ -64,7 +68,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 4: 자기 수정에서는 마지막 날짜 표현을 최종 의도로 사용한다", async () => {
-    const result = await analyzeIntake(fixtures.case4);
+    const result = await analyzeMock(fixtures.case4);
 
     expect(result.appointment.date.value).toBe("2026-08-12");
     expect(result.appointment.date.status).toBe("CONFIRMED_BY_INPUT");
@@ -73,7 +77,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 5: 위험 표현은 판단하지 않고 사람 확인 신호만 올린다", async () => {
-    const result = await analyzeIntake(fixtures.case5);
+    const result = await analyzeMock(fixtures.case5);
 
     expect(result.safety.signal_detected).toBe(true);
     expect(result.safety.human_escalation_required).toBe(true);
@@ -82,7 +86,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 6: 데이터에 없는 명시적 병원명도 직접 발화로 추출한다", async () => {
-    const result = await analyzeIntake(fixtures.case6);
+    const result = await analyzeMock(fixtures.case6);
 
     expect(result.hospital.candidates[0]).toMatchObject({
       name: "광주새봄병원",
@@ -99,7 +103,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 7: 다른 필드가 없어도 직접 말한 날짜와 진료과를 확인 상태로 둔다", async () => {
-    const result = await analyzeIntake(fixtures.case7);
+    const result = await analyzeMock(fixtures.case7);
 
     expect(result.appointment.date).toMatchObject({
       value: "2026-08-11",
@@ -118,7 +122,7 @@ describe("동행고리AI mock intake analyzer", () => {
   });
 
   it("CASE 8: 날짜 자기 수정 후 최종 날짜도 직접 발화 상태를 유지한다", async () => {
-    const result = await analyzeIntake(fixtures.case8);
+    const result = await analyzeMock(fixtures.case8);
 
     expect(result.appointment.date).toMatchObject({
       value: "2026-08-12",
