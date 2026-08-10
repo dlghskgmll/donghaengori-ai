@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { ArrowRight, FlaskConical, Phone, Sparkles } from "lucide-react";
+import { VoiceInput } from "./VoiceInput";
 
 export interface IntakeFormValues {
   caller_phone: string;
@@ -66,6 +67,15 @@ export function IntakeForm({ onAnalyze, isLoading, error }: IntakeFormProps) {
     await onAnalyze(values);
   };
 
+  const handleTranscript = (transcript: string) => {
+    setValues((current) => ({
+      ...current,
+      transcript: current.transcript.trim()
+        ? `${current.transcript.trimEnd()}\n${transcript}`
+        : transcript,
+    }));
+  };
+
   return (
     <section className="intake-panel" aria-labelledby="intake-heading">
       <div className="panel-heading">
@@ -97,6 +107,8 @@ export function IntakeForm({ onAnalyze, isLoading, error }: IntakeFormProps) {
           />
           <span className="field-help">후보 식별에만 사용하며 대상을 확정하지 않습니다.</span>
         </label>
+
+        <VoiceInput disabled={isLoading} onTranscript={handleTranscript} />
 
         <label className="form-field transcript-field">
           <span className="form-label">
