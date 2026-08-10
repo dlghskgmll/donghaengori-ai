@@ -21,6 +21,8 @@ export interface DeterministicTimeFact {
   value: string | null;
   sourceText: string | null;
   evidenceRef: string | null;
+  selfCorrected: boolean;
+  uncertain: boolean;
 }
 
 export interface DeterministicFacts {
@@ -56,29 +58,97 @@ function hasAmbiguousDateChoice(transcript: string) {
   return [...transcript.matchAll(UNCERTAIN_DATE_CHOICE_PATTERN)].length >= 2;
 }
 
-function parseExplicitTime(transcript: string): DeterministicTimeFact {
-  const match = transcript.match(
-    /(오전|오후)?\s*(열두|열한|다섯|여섯|일곱|여덟|아홉|한|두|세|네|열|\d{1,2})\s*시(?:\s*(?:(\d{1,2})\s*분|(반)))?/,
+const EXPLICIT_TIME_PATTERN =
+  /(오전|오후)?\s*(열두|열한|다섯|여섯|일곱|여덟|아홉|한|두|세|네|열|\d{1,2})\s*시(?:\s*(?:(\d{1,2})\s*분|(반)))?/g;
+
+// 명시적 정정 연결 표현("아니", "아니고", "아니라", "말고")이 있을 때만
+// 뒤의 시간을 최종 의도로 인정한다.
+const TIME_CORRECTION_PATTERN = /아니|말고/;
+// 마지막 시간 발화 바로 뒤의 부정("열 시는 아니에요")은 확정 근거로 쓸 수 없다.
+const TRAILING_TIME_NEGATION_PATTERN = /^\s*(?:는|은|이|가)?\s*아니/;
+
+const NO_TIME_FACT: DeterministicTimeFact = {
+  value: null,
+  sourceText: null,
+  evidenceRef: null,
+  selfCorrected: false,
+  uncertain: false,
+};
+
+const UNCERTAIN_TIME_FACT: DeterministicTimeFact = {
+  value: null,
+  sourceText: null,
+  evidenceRef: null,
+  selfCorrected: false,
+  uncertain: true,
+};
+
+export function parseExplicitTime(transcript: string): DeterministicTimeFact {
+  const candidates: Array<{
+    value: string;
+    sourceText: string;
+    index: number;
+    endIndex: number;
+  }> = [];
+
+  for (const match of transcript.matchAll(EXPLICIT_TIME_PATTERN)) {
+    const meridiem = match[1];
+    const hourToken = match[2];
+    let hour = KOREAN_HOURS[hourToken] ?? Number(hourToken);
+    const minute = match[4] === "반" ? 30 : Number(match[3] ?? 0);
+
+    if (hour > 23 || minute > 59) continue;
+    if (meridiem === "오후" && hour < 12) hour += 12;
+    if (meridiem === "오전" && hour === 12) hour = 0;
+    if (match.index === undefined) continue;
+
+    candidates.push({
+      value: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+      sourceText: match[0].trim(),
+      index: match.index,
+      endIndex: match.index + match[0].length,
+    });
+  }
+
+  const finalCandidate = candidates.at(-1);
+  if (!finalCandidate) return NO_TIME_FACT;
+
+  // "열 시는 아니에요"처럼 마지막 시간이 부정되면 시간을 확정하지 않는다.
+  const negated = TRAILING_TIME_NEGATION_PATTERN.test(
+    transcript.slice(finalCandidate.endIndex),
   );
-  if (!match) {
-    return { value: null, sourceText: null, evidenceRef: null };
+
+  const distinctValues = new Set(candidates.map((candidate) => candidate.value));
+  if (distinctValues.size > 1) {
+    // 시간은 예약·출발·도착 등 서로 다른 의미가 공존할 수 있으므로,
+    // 명시적 정정 표현으로 연결된 경우에만 마지막 발화를 최종 의도로 사용한다.
+    // 그 외 복수 시간(병렬 언급, 선택지 "10시나 11시", 범위 "10시부터 11시")은
+    // 확정하지 않고 담당자 확인으로 넘긴다.
+    const previousCandidate = candidates.at(-2)!;
+    const connective = transcript.slice(
+      previousCandidate.endIndex,
+      finalCandidate.index,
+    );
+    if (TIME_CORRECTION_PATTERN.test(connective) && !negated) {
+      return {
+        value: finalCandidate.value,
+        sourceText: finalCandidate.sourceText,
+        evidenceRef: "time-parser:explicit-time",
+        selfCorrected: true,
+        uncertain: false,
+      };
+    }
+    return UNCERTAIN_TIME_FACT;
   }
 
-  const meridiem = match[1];
-  const hourToken = match[2];
-  let hour = KOREAN_HOURS[hourToken] ?? Number(hourToken);
-  const minute = match[4] === "반" ? 30 : Number(match[3] ?? 0);
-
-  if (hour > 23 || minute > 59) {
-    return { value: null, sourceText: null, evidenceRef: null };
-  }
-  if (meridiem === "오후" && hour < 12) hour += 12;
-  if (meridiem === "오전" && hour === 12) hour = 0;
+  if (negated) return UNCERTAIN_TIME_FACT;
 
   return {
-    value: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
-    sourceText: match[0].trim(),
+    value: finalCandidate.value,
+    sourceText: finalCandidate.sourceText,
     evidenceRef: "time-parser:explicit-time",
+    selfCorrected: false,
+    uncertain: false,
   };
 }
 

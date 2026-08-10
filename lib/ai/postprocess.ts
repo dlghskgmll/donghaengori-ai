@@ -346,15 +346,22 @@ export function assembleOpenAIAnalysis(
           value: context.deterministic.explicitTime.value,
           status: "CONFIRMED_BY_INPUT",
           confidence: CONFIDENCE_POLICY.DIRECT_EXACT,
-          evidence: [
+          evidence: unique([
             `원문에서 “${context.deterministic.explicitTime.sourceText}”을 직접 말함`,
-          ],
+            ...(context.deterministic.explicitTime.selfCorrected
+              ? ["앞선 시간 표현보다 마지막 발화를 최종 의도로 반영"]
+              : []),
+          ]),
         }
       : {
           value: null,
           status: "NEEDS_CONFIRMATION",
           confidence: 0,
-          evidence: ["원문에서 방문 시간을 확인할 수 없음"],
+          evidence: [
+            context.deterministic.explicitTime.uncertain
+              ? "원문에서 방문 시간이 불확실하게 표현됨"
+              : "원문에서 방문 시간을 확인할 수 없음",
+          ],
         };
 
   const additionalRequests = additionalWithRefs.flatMap(({ request, audit }) => {

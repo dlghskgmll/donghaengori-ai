@@ -136,6 +136,159 @@ describe("deterministic intake preprocessing", () => {
       value: "15:00",
       sourceText: "오후 세 시",
       evidenceRef: "time-parser:explicit-time",
+      selfCorrected: false,
+    });
+  });
+
+  it("CASE 25: '열 시 아니 열한 시'는 마지막 시간 발화를 최종 의도로 사용한다", () => {
+    const facts = parseDeterministicFacts(
+      "내일 아니고 모레요. 열 시, 아니 열한 시에 가려고.",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: "11:00",
+      sourceText: "열한 시",
+      selfCorrected: true,
+    });
+    expect(facts.explicitDate).toMatchObject({
+      value: "2026-08-12",
+      selfCorrected: true,
+    });
+  });
+
+  it("CASE 25-보강: 같은 시간을 반복 말한 경우는 자기수정으로 표시하지 않는다", () => {
+    const facts = parseDeterministicFacts(
+      "오전 10시에 갈게요. 네, 10시요.",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: "10:00",
+      selfCorrected: false,
+      uncertain: false,
+    });
+  });
+
+  it("CASE 26: '열 시 아니고 열한 시요'는 정정된 11:00을 사용한다", () => {
+    const facts = parseDeterministicFacts("열 시 아니고 열한 시요", REFERENCE_DATE);
+
+    expect(facts.explicitTime).toMatchObject({
+      value: "11:00",
+      sourceText: "열한 시",
+      selfCorrected: true,
+      uncertain: false,
+    });
+  });
+
+  it("CASE 27: '열 시 말고 열한 시'는 정정된 11:00을 사용한다", () => {
+    const facts = parseDeterministicFacts("열 시 말고 열한 시", REFERENCE_DATE);
+
+    expect(facts.explicitTime).toMatchObject({
+      value: "11:00",
+      selfCorrected: true,
+    });
+  });
+
+  it("CASE 27-보강: '열 시가 아니라 열한 시'도 정정으로 처리한다", () => {
+    const facts = parseDeterministicFacts(
+      "열 시가 아니라 열한 시에 가려고요.",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: "11:00",
+      selfCorrected: true,
+    });
+  });
+
+  it("CASE 28: 선택지 '열 시나 열한 시 중에'는 시간을 확정하지 않는다", () => {
+    const facts = parseDeterministicFacts(
+      "열 시나 열한 시 중에 가능해요",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: null,
+      selfCorrected: false,
+      uncertain: true,
+    });
+  });
+
+  it("CASE 29: 범위 '열 시부터 열한 시 사이'는 시간을 확정하지 않는다", () => {
+    const facts = parseDeterministicFacts(
+      "열 시부터 열한 시 사이에 가려고요",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: null,
+      uncertain: true,
+    });
+  });
+
+  it("CASE 30: 부정된 시간 '열 시는 아니에요'는 확정하지 않는다", () => {
+    const facts = parseDeterministicFacts("열 시는 아니에요", REFERENCE_DATE);
+
+    expect(facts.explicitTime).toMatchObject({
+      value: null,
+      uncertain: true,
+    });
+  });
+
+  it("CASE 31: 날짜와 시간을 함께 정정하면 둘 다 마지막 발화를 사용한다", () => {
+    const facts = parseDeterministicFacts(
+      "내일 열 시에 가려고요. 아니, 모레 열한 시로 할게요",
+      "2026-08-11",
+    );
+
+    expect(facts.explicitDate).toMatchObject({
+      value: "2026-08-13",
+      selfCorrected: true,
+    });
+    expect(facts.explicitTime).toMatchObject({
+      value: "11:00",
+      selfCorrected: true,
+    });
+  });
+
+  it("CASE 32: 단일 시간 발화 '내일 오전 열 시'는 그대로 10:00이다", () => {
+    const facts = parseDeterministicFacts(
+      "내일 오전 열 시에 병원에 가려고요",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: "10:00",
+      selfCorrected: false,
+      uncertain: false,
+    });
+  });
+
+  it("CASE 33: 정정 표현 없는 복수 시간(진료 10시·출발 9시)은 확정하지 않는다", () => {
+    const facts = parseDeterministicFacts(
+      "10시에 진료 보고 9시에 출발해요",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: null,
+      selfCorrected: false,
+      uncertain: true,
+    });
+  });
+
+  it("CASE 34: 출발·진료 시간 병렬 발화도 schema상 구분 불가하므로 확정하지 않는다", () => {
+    // 현재 schema에는 appointment.time 하나뿐이라 출발/진료 시간을 구분할 수 없다.
+    // 임의로 하나를 고르지 않고 담당자 확인으로 넘기는 것이 안전하다.
+    const facts = parseDeterministicFacts(
+      "9시에 출발해서 10시에 진료 봐요",
+      REFERENCE_DATE,
+    );
+
+    expect(facts.explicitTime).toMatchObject({
+      value: null,
+      uncertain: true,
     });
   });
 

@@ -1,4 +1,5 @@
 import { parseRelativeDate } from "../date/parseRelativeDate";
+import { parseExplicitTime } from "./deterministic";
 import type { EvidenceStatus, RequestType } from "../domain/intake";
 import type { Visit } from "../domain/visit";
 import type { IntakeProviderContext } from "./provider";
@@ -77,26 +78,6 @@ function detectRequestType(transcript: string): {
     return { value: "HOSPITAL_COMPANION", confidence: 0.91 };
   }
   return { value: "UNKNOWN", confidence: 0.35 };
-}
-
-function parseTime(transcript: string) {
-  const match = transcript.match(
-    /(오전|오후)?\s*(\d{1,2})시(?:\s*(?:(\d{1,2})분|(반)))?/,
-  );
-  if (!match) return null;
-
-  const meridiem = match[1];
-  let hour = Number(match[2]);
-  const minute = match[4] === "반" ? 30 : Number(match[3] ?? 0);
-
-  if (hour > 23 || minute > 59) return null;
-  if (meridiem === "오후" && hour < 12) hour += 12;
-  if (meridiem === "오전" && hour === 12) hour = 0;
-
-  return {
-    value: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
-    source: match[0].trim(),
-  };
 }
 
 function findExplicitValue(transcript: string, values: string[]) {
@@ -179,7 +160,7 @@ export function analyzeMockIntake(
   const { transcript, reference_date: referenceDate } = context.input;
   const explicitHospital = findExplicitHospital(transcript);
   const explicitDepartment = findExplicitValue(transcript, KNOWN_DEPARTMENTS);
-  const parsedTime = parseTime(transcript);
+  const parsedTime = parseExplicitTime(transcript);
   const primaryPerson = context.people[0] ?? null;
   const latestVisit = primaryPerson?.visits[0] ?? null;
   const refersToPriorVisit = PRIOR_VISIT_PHRASES.some((phrase) =>
@@ -208,19 +189,29 @@ export function analyzeMockIntake(
   });
 
   const date = appointmentDate(transcript, referenceDate);
-  const time: IntakeAnalysis["appointment"]["time"] = parsedTime
-    ? {
-        value: parsedTime.value,
-        status: "CONFIRMED_BY_INPUT",
-        confidence: 0.98,
-        evidence: [`원문에서 “${parsedTime.source}”을 직접 말함`],
-      }
-    : {
-        value: null,
-        status: "NEEDS_CONFIRMATION",
-        confidence: 0,
-        evidence: ["원문에서 방문 시간을 확인할 수 없음"],
-      };
+  const time: IntakeAnalysis["appointment"]["time"] =
+    parsedTime.value && parsedTime.sourceText
+      ? {
+          value: parsedTime.value,
+          status: "CONFIRMED_BY_INPUT",
+          confidence: 0.98,
+          evidence: [
+            `원문에서 “${parsedTime.sourceText}”을 직접 말함`,
+            ...(parsedTime.selfCorrected
+              ? ["앞선 시간 표현보다 마지막 발화를 최종 의도로 반영"]
+              : []),
+          ],
+        }
+      : {
+          value: null,
+          status: "NEEDS_CONFIRMATION",
+          confidence: 0,
+          evidence: [
+            parsedTime.uncertain
+              ? "원문에서 방문 시간이 불확실하게 표현됨"
+              : "원문에서 방문 시간을 확인할 수 없음",
+          ],
+        };
 
   let hospitalCandidates: IntakeAnalysis["hospital"]["candidates"] = [];
   if (explicitHospital) {
