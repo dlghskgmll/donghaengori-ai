@@ -2,11 +2,25 @@ import { ZodError } from "zod";
 import { IntakeProviderError } from "@/lib/ai/errors";
 import { TranscriptionError } from "@/lib/ai/transcribe";
 import {
+  CLAWOPS_MESSAGES,
+  analysisNeedsFollowUp,
+  buildClawOpsSayHangupVoiceML,
+  clawOpsXmlResponse,
+  isClawOpsEnabled,
+  normalizeCallerPhone,
+  readClawOpsWebhook,
+  resolveCallerLookupPhone,
+} from "@/lib/phone/clawops";
+import {
   PhoneIntakeError,
   defaultPhoneRecordingIntakeDeps,
   processRecordingComplete,
 } from "@/lib/phone/recordingIntake";
-import { PhoneRecordingCompleteEventSchema } from "@/lib/phone/types";
+import {
+  PhoneRecordingCompleteEventSchema,
+  RECORDING_COMPLETE_CALLBACK_PATH,
+  type PhoneRecordingCompleteEvent,
+} from "@/lib/phone/types";
 import { readVerifiedWebhookBody } from "@/lib/phone/webhook";
 
 function errorResponse(status: number, message: string) {
@@ -24,7 +38,79 @@ const PHONE_INTAKE_ERROR_STATUS: Record<PhoneIntakeError["code"], number> = {
   RECORDING_DOWNLOAD_FAILED: 502,
 };
 
+function classifyIntakeFailureCode(error: unknown): string {
+  if (
+    error instanceof PhoneIntakeError ||
+    error instanceof TranscriptionError ||
+    error instanceof IntakeProviderError
+  ) {
+    return error.code;
+  }
+  if (error instanceof ZodError) return "PHONE_INTAKE_INPUT_INVALID";
+  return "PHONE_INTAKE_UNKNOWN";
+}
+
+async function handleClawOpsRecordingComplete(request: Request) {
+  const read = await readClawOpsWebhook(
+    request,
+    RECORDING_COMPLETE_CALLBACK_PATH,
+  );
+  if (!read.ok) return read.response;
+
+  const callId = read.params.CallId?.trim();
+  const recordingUrl = read.params.RecordingUrl?.trim();
+  const duration = Number(read.params.RecordingDuration?.trim());
+  if (!callId || !recordingUrl || !Number.isInteger(duration) || duration < 0) {
+    return errorResponse(400, "webhook payload가 올바르지 않습니다.");
+  }
+
+  const callerPhone = await resolveCallerLookupPhone(
+    normalizeCallerPhone(read.params.From ?? ""),
+  );
+
+  let event: PhoneRecordingCompleteEvent;
+  try {
+    event = PhoneRecordingCompleteEventSchema.parse({
+      call_id: callId,
+      recording_url: recordingUrl,
+      duration_seconds: duration,
+      caller_phone: callerPhone,
+    });
+  } catch {
+    return errorResponse(400, "webhook payload가 올바르지 않습니다.");
+  }
+
+  try {
+    const outcome = await processRecordingComplete(
+      event,
+      defaultPhoneRecordingIntakeDeps(),
+    );
+    if (outcome.duplicate) {
+      return clawOpsXmlResponse(
+        buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.accepted),
+      );
+    }
+    const message = analysisNeedsFollowUp(outcome.result.analysis)
+      ? CLAWOPS_MESSAGES.needsReview
+      : CLAWOPS_MESSAGES.accepted;
+    return clawOpsXmlResponse(buildClawOpsSayHangupVoiceML(message));
+  } catch (error) {
+    console.error("phone recording intake failed", {
+      call_id: callId,
+      code: classifyIntakeFailureCode(error),
+    });
+    // 통화 상대에게 기술 오류를 노출하지 않고 안내 후 정상 종료한다.
+    return clawOpsXmlResponse(
+      buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.failure),
+    );
+  }
+}
+
 export async function POST(request: Request) {
+  if (isClawOpsEnabled()) {
+    return handleClawOpsRecordingComplete(request);
+  }
+
   const verified = await readVerifiedWebhookBody(request);
   if (!verified.ok) {
     return errorResponse(verified.status, verified.message);
