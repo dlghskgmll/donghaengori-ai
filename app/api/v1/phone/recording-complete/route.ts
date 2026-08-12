@@ -1,9 +1,9 @@
 import { ZodError } from "zod";
 import { IntakeProviderError } from "@/lib/ai/errors";
 import { TranscriptionError } from "@/lib/ai/transcribe";
+import { runAfterResponse } from "@/lib/phone/backgroundTask";
 import {
   CLAWOPS_MESSAGES,
-  analysisNeedsFollowUp,
   buildClawOpsSayHangupVoiceML,
   clawOpsXmlResponse,
   isClawOpsEnabled,
@@ -14,6 +14,7 @@ import {
 import {
   PhoneIntakeError,
   defaultPhoneRecordingIntakeDeps,
+  parseRecordingUrl,
   processRecordingComplete,
 } from "@/lib/phone/recordingIntake";
 import {
@@ -50,6 +51,11 @@ function classifyIntakeFailureCode(error: unknown): string {
   return "PHONE_INTAKE_UNKNOWN";
 }
 
+// 전화 제어 경로(FAST)와 AI 처리 경로(BACKGROUND)를 분리한다.
+// 실전화 E2E에서 동기 download→STT→Analyze(~17초)가 ClawOps <Record action>
+// callback timeout을 초과해 통화가 오류로 끊겼다("The operation was aborted
+// due to timeout"). ClawOps에는 서명/parse/저비용 검증 후 즉시 VoiceML을
+// 반환하고, AI 파이프라인은 응답 이후 after()로 이어서 실행한다.
 async function handleClawOpsRecordingComplete(request: Request) {
   const read = await readClawOpsWebhook(
     request,
@@ -62,6 +68,26 @@ async function handleClawOpsRecordingComplete(request: Request) {
   const duration = Number(read.params.RecordingDuration?.trim());
   if (!callId || !recordingUrl || !Number.isInteger(duration) || duration < 0) {
     return errorResponse(400, "webhook payload가 올바르지 않습니다.");
+  }
+
+  // 무발화 녹음은 background AI를 시작하지 않고 바로 안내 후 종료한다.
+  if (duration === 0) {
+    return clawOpsXmlResponse(
+      buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.noSpeech),
+    );
+  }
+
+  // recording URL 안전성은 저비용 동기 검증이므로 schedule 전에 확인한다.
+  try {
+    parseRecordingUrl(recordingUrl);
+  } catch (error) {
+    console.error("phone recording intake failed", {
+      call_id: callId,
+      code: classifyIntakeFailureCode(error),
+    });
+    return clawOpsXmlResponse(
+      buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.failure),
+    );
   }
 
   const callerPhone = await resolveCallerLookupPhone(
@@ -80,30 +106,32 @@ async function handleClawOpsRecordingComplete(request: Request) {
     return errorResponse(400, "webhook payload가 올바르지 않습니다.");
   }
 
-  try {
-    const outcome = await processRecordingComplete(
-      event,
-      defaultPhoneRecordingIntakeDeps(),
-    );
-    if (outcome.duplicate) {
-      return clawOpsXmlResponse(
-        buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.accepted),
+  // 응답 이후 기존 파이프라인을 그대로 실행한다. idempotency claim은
+  // processRecordingComplete 내부에 있으므로 중복 callback이 여러 개
+  // schedule되어도 분석은 1회만 실행된다.
+  runAfterResponse(async () => {
+    try {
+      const outcome = await processRecordingComplete(
+        event,
+        defaultPhoneRecordingIntakeDeps(),
       );
+      console.info("phone recording intake completed", {
+        call_id: callId,
+        duplicate: outcome.duplicate,
+      });
+    } catch (error) {
+      // background 실패는 이미 반환된 통화 응답에 영향을 주지 않는다.
+      console.error("phone recording intake failed", {
+        call_id: callId,
+        code: classifyIntakeFailureCode(error),
+      });
     }
-    const message = analysisNeedsFollowUp(outcome.result.analysis)
-      ? CLAWOPS_MESSAGES.needsReview
-      : CLAWOPS_MESSAGES.accepted;
-    return clawOpsXmlResponse(buildClawOpsSayHangupVoiceML(message));
-  } catch (error) {
-    console.error("phone recording intake failed", {
-      call_id: callId,
-      code: classifyIntakeFailureCode(error),
-    });
-    // 통화 상대에게 기술 오류를 노출하지 않고 안내 후 정상 종료한다.
-    return clawOpsXmlResponse(
-      buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.failure),
-    );
-  }
+  });
+
+  // 접수 확정·분석 성공을 의미하지 않는 안내이며, 최종 판단은 사람이 한다.
+  return clawOpsXmlResponse(
+    buildClawOpsSayHangupVoiceML(CLAWOPS_MESSAGES.accepted),
+  );
 }
 
 export async function POST(request: Request) {

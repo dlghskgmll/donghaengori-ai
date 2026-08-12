@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { analyzeIntakeRequest } from "../lib/ai/analyzeIntake";
+import { TranscriptionError } from "../lib/ai/transcribe";
 import {
   CLAWOPS_GREETING,
   CLAWOPS_MESSAGES,
@@ -17,6 +18,15 @@ const routeDownloadMock = vi.hoisted(() => vi.fn());
 const routeTranscribeMock = vi.hoisted(() => vi.fn());
 const routeAnalyzeMock = vi.hoisted(() => vi.fn());
 const useRealAnalyze = vi.hoisted(() => ({ current: false }));
+// after() 대체 테스트 훅: schedule된 background task를 모아 두고
+// flushBackground()로 임의 시점에 실행한다.
+const backgroundTasks = vi.hoisted(() => [] as Array<() => Promise<void>>);
+
+vi.mock("@/lib/phone/backgroundTask", () => ({
+  runAfterResponse: (task: () => Promise<void>) => {
+    backgroundTasks.push(task);
+  },
+}));
 
 vi.mock("@/lib/phone/recordingIntake", async (importOriginal) => {
   const actual =
@@ -43,6 +53,13 @@ const { POST: statusPost } = await import("../app/api/v1/phone/status/route");
 
 const SECRET = "clawops-test-signing-key";
 const BASE_URL = "https://donghaeng.example.com";
+
+async function flushBackground() {
+  const tasks = backgroundTasks.splice(0, backgroundTasks.length);
+  for (const task of tasks) {
+    await task();
+  }
+}
 
 function signedFormRequest(
   path: string,
@@ -114,20 +131,13 @@ beforeEach(() => {
   routeAnalyzeMock.mockResolvedValue({
     intake_id: "PHONE-TEST",
     status: "DRAFT_AI",
-    analysis: {
-      human_review_required: true,
-      safety: { signal_detected: false },
-      appointment: {
-        date: { status: "CONFIRMED_BY_INPUT" },
-        time: { status: "CONFIRMED_BY_INPUT" },
-      },
-      hospital: { candidates: [{ status: "CONFIRMED_BY_INPUT" }] },
-    },
+    analysis: { human_review_required: true },
     meta: { provider_used: "mock" },
   });
 });
 
 afterEach(() => {
+  backgroundTasks.length = 0;
   vi.unstubAllEnvs();
   routeDownloadMock.mockReset();
   routeTranscribeMock.mockReset();
@@ -185,7 +195,7 @@ describe("ClawOps incoming call", () => {
     expect(computeClawOpsSignature("my-signing-key", url, params)).toBe(expected);
   });
 
-  it("CASE 47: 잘못된 X-Signature는 401이며 VoiceML/AI를 만들지 않는다", async () => {
+  it("CASE 47: 잘못된 X-Signature는 401이며 VoiceML/AI/background를 만들지 않는다", async () => {
     const response = await incomingPost(
       signedFormRequest("/api/v1/phone/incoming", incomingFields(), {
         signature: "invalid-signature==",
@@ -197,6 +207,7 @@ describe("ClawOps incoming call", () => {
     expect(JSON.stringify(payload)).not.toContain("<Response>");
     expect(routeDownloadMock).not.toHaveBeenCalled();
     expect(routeAnalyzeMock).not.toHaveBeenCalled();
+    expect(backgroundTasks).toHaveLength(0);
   });
 
   it("CASE 48: APP_BASE_URL 미설정이면 Record XML 없이 안전한 설정 오류를 반환한다", async () => {
@@ -236,7 +247,7 @@ describe("ClawOps incoming call", () => {
     expect(response.status).toBe(403);
   });
 
-  it("보안: form이 아닌 content-type과 malformed body는 400으로 거절한다", async () => {
+  it("보안: form이 아닌 content-type과 malformed body는 400이며 background가 없다", async () => {
     const wrongType = await incomingPost(
       signedFormRequest("/api/v1/phone/incoming", incomingFields(), {
         contentType: "application/json",
@@ -250,6 +261,7 @@ describe("ClawOps incoming call", () => {
       }),
     );
     expect(missingCallId.status).toBe(400);
+    expect(backgroundTasks).toHaveLength(0);
   });
 
   it("보안: 과대 webhook body는 413으로 거절한다", async () => {
@@ -272,7 +284,7 @@ describe("ClawOps caller identity policy", () => {
     expect(normalizeCallerPhone("anonymous")).toBe("");
   });
 
-  it("CASE 50-보강: recording callback의 From이 정규화되어 분석 입력으로 전달된다", async () => {
+  it("CASE 50-보강: From이 정규화되어 background 분석 입력으로 전달된다", async () => {
     const response = await recordingCompletePost(
       signedFormRequest(
         "/api/v1/phone/recording-complete",
@@ -280,6 +292,8 @@ describe("ClawOps caller identity policy", () => {
       ),
     );
     expect(response.status).toBe(200);
+    await flushBackground();
+
     expect(routeAnalyzeMock).toHaveBeenCalledTimes(1);
     const [input] = routeAnalyzeMock.mock.calls[0] as [
       { caller_phone: string },
@@ -288,22 +302,6 @@ describe("ClawOps caller identity policy", () => {
   });
 
   it("CASE 51: 알려진 발신번호도 candidate일 뿐 확정 신원이 아니다", async () => {
-    useRealAnalyze.current = true;
-    routeTranscribeMock.mockResolvedValue({
-      transcript: "나 모레 저번에 무릎 봐준 데 가야겄어.",
-      provider_used: "openai",
-      model: "test",
-    });
-
-    const response = await recordingCompletePost(
-      signedFormRequest(
-        "/api/v1/phone/recording-complete",
-        recordingFields({ From: "+821011111111" }),
-      ),
-    );
-    expect(response.status).toBe(200);
-
-    // 동일 입력을 실제 파이프라인으로 검증: 후보는 있으나 CANDIDATE 상태 유지.
     const result = await analyzeIntakeRequest(
       { caller_phone: "010-1111-1111", transcript: "나 모레 저번에 무릎 봐준 데 가야겄어." },
       { intakeId: "TEST-CASE-51" },
@@ -339,8 +337,31 @@ describe("ClawOps caller identity policy", () => {
   });
 });
 
-describe("ClawOps recording callback", () => {
-  it("CASE 53: 유효한 callback은 downloader→STT→Analyze를 재사용하고 XML을 반환한다", async () => {
+describe("ClawOps recording callback — fast phone path (Phase 4C-1)", () => {
+  it("CASE 58: AI promise가 미해결이어도 즉시 Say+Hangup XML을 반환한다", async () => {
+    // 절대 resolve되지 않는 STT promise — 응답이 AI와 분리되어 있음을 증명.
+    routeTranscribeMock.mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    const response = await recordingCompletePost(
+      signedFormRequest("/api/v1/phone/recording-complete", recordingFields()),
+    );
+    const xml = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe(
+      "application/xml; charset=utf-8",
+    );
+    expect(xml).toContain(CLAWOPS_MESSAGES.accepted);
+    expect(xml).toContain("<Hangup/>");
+    // AI는 아직 시작조차 하지 않았고 background에 1건만 예약되어 있다.
+    expect(routeDownloadMock).not.toHaveBeenCalled();
+    expect(routeTranscribeMock).not.toHaveBeenCalled();
+    expect(backgroundTasks).toHaveLength(1);
+  });
+
+  it("CASE 59: 응답 이후 background에서 기존 downloader→STT→Analyze가 실행된다", async () => {
     const order: string[] = [];
     routeDownloadMock.mockImplementation(async () => {
       order.push("download");
@@ -358,15 +379,7 @@ describe("ClawOps recording callback", () => {
       return {
         intake_id: "X",
         status: "DRAFT_AI",
-        analysis: {
-          human_review_required: true,
-          safety: { signal_detected: false },
-          appointment: {
-            date: { status: "CONFIRMED_BY_INPUT" },
-            time: { status: "CONFIRMED_BY_INPUT" },
-          },
-          hospital: { candidates: [{ status: "CONFIRMED_BY_INPUT" }] },
-        },
+        analysis: { human_review_required: true },
         meta: {},
       };
     });
@@ -374,17 +387,48 @@ describe("ClawOps recording callback", () => {
     const response = await recordingCompletePost(
       signedFormRequest("/api/v1/phone/recording-complete", recordingFields()),
     );
+    expect(response.status).toBe(200);
+    expect(order).toEqual([]);
+
+    await flushBackground();
+    expect(order).toEqual(["download", "transcribe", "analyze"]);
+  });
+
+  it("CASE 60: background AI 실패는 통화 응답에 영향이 없고 안전하게만 로그된다", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const secretUrl = "https://recordings.clawops.example.com/secret-rec.mp3";
+    routeTranscribeMock.mockRejectedValueOnce(
+      new TranscriptionError("STT_PROVIDER_FAILED", "음성 변환 호출에 실패했습니다.", {
+        cause: new Error("OpenAI raw error sk-FAKE123 stack trace"),
+      }),
+    );
+
+    const response = await recordingCompletePost(
+      signedFormRequest(
+        "/api/v1/phone/recording-complete",
+        recordingFields({ From: "+821055554444", RecordingUrl: secretUrl }),
+      ),
+    );
     const xml = await response.text();
 
     expect(response.status).toBe(200);
-    expect(order).toEqual(["download", "transcribe", "analyze"]);
-    expect(response.headers.get("Content-Type")).toBe(
-      "application/xml; charset=utf-8",
-    );
-    expect(xml).toContain("<Hangup/>");
+    expect(xml).toContain(CLAWOPS_MESSAGES.accepted);
+    expect(xml).not.toMatch(/sk-|stack|OpenAI/);
+
+    await flushBackground();
+
+    const logged = errorSpy.mock.calls
+      .map((args) => JSON.stringify(args))
+      .join(" ");
+    expect(logged).toContain("STT_PROVIDER_FAILED");
+    expect(logged).not.toContain("5555");
+    expect(logged).not.toContain("secret-rec");
+    expect(logged).not.toContain("sk-FAKE123");
+    expect(logged).not.toContain(SECRET);
+    errorSpy.mockRestore();
   });
 
-  it("CASE 54: RecordingDuration 0은 STT/AI 호출 없이 안전 안내로 종료한다", async () => {
+  it("CASE 61: RecordingDuration 0은 background 없이 무발화 안내로 종료한다", async () => {
     const response = await recordingCompletePost(
       signedFormRequest(
         "/api/v1/phone/recording-complete",
@@ -394,38 +438,33 @@ describe("ClawOps recording callback", () => {
     const xml = await response.text();
 
     expect(response.status).toBe(200);
-    expect(xml).toContain(CLAWOPS_MESSAGES.failure);
+    expect(xml).toContain(CLAWOPS_MESSAGES.noSpeech);
     expect(xml).toContain("<Hangup/>");
+    expect(backgroundTasks).toHaveLength(0);
+    expect(routeDownloadMock).not.toHaveBeenCalled();
     expect(routeTranscribeMock).not.toHaveBeenCalled();
     expect(routeAnalyzeMock).not.toHaveBeenCalled();
   });
 
-  it("CASE 55: 정상 접수는 확정 표현 없는 안내 TTS와 Hangup을 반환한다", async () => {
-    useRealAnalyze.current = true;
-    routeTranscribeMock.mockResolvedValue({
-      transcript:
-        "안녕하세요 김영자인데 내일 오전 10시에 순천가상병원 정형외과에 가려고요.",
-      provider_used: "openai",
-      model: "test",
-    });
-
-    const response = await recordingCompletePost(
-      signedFormRequest(
-        "/api/v1/phone/recording-complete",
-        recordingFields({ From: "+821022222222" }),
-      ),
+  it("CASE 62: 중복 callback은 background가 여러 번 예약돼도 분석은 1회만 실행한다", async () => {
+    const fields = recordingFields();
+    const first = await recordingCompletePost(
+      signedFormRequest("/api/v1/phone/recording-complete", fields),
     );
-    const xml = await response.text();
+    const second = await recordingCompletePost(
+      signedFormRequest("/api/v1/phone/recording-complete", fields),
+    );
 
-    expect(response.status).toBe(200);
-    expect(xml).toContain(CLAWOPS_MESSAGES.accepted);
-    expect(xml).toContain("<Hangup/>");
-    for (const banned of ["완료되었습니다", "확정"]) {
-      expect(xml).not.toContain(banned);
-    }
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(backgroundTasks).toHaveLength(2);
+
+    await flushBackground();
+    expect(routeAnalyzeMock).toHaveBeenCalledTimes(1);
+    expect(routeDownloadMock).toHaveBeenCalledTimes(1);
   });
 
-  it("CASE 56: 모호한 발화는 needs-review TTS를 반환하고 병원은 INFERRED를 유지한다", async () => {
+  it("CASE 65: 모호한 발화도 background 분석에서 기존 safety semantics를 유지한다", async () => {
     useRealAnalyze.current = true;
     routeTranscribeMock.mockResolvedValue({
       transcript: "나 모레 저번에 무릎 봐준 데 가야겄어.",
@@ -439,62 +478,76 @@ describe("ClawOps recording callback", () => {
         recordingFields({ From: "+821011111111" }),
       ),
     );
-    const xml = await response.text();
-
     expect(response.status).toBe(200);
-    expect(xml).toContain(CLAWOPS_MESSAGES.needsReview);
+    await flushBackground();
 
+    // 동일 입력에 대한 파이프라인 결과로 safety invariant를 검증한다.
     const result = await analyzeIntakeRequest(
       { caller_phone: "010-1111-1111", transcript: "나 모레 저번에 무릎 봐준 데 가야겄어." },
-      { intakeId: "TEST-CASE-56" },
+      { intakeId: "TEST-CASE-65" },
     );
     expect(result.analysis.hospital.candidates[0]).toMatchObject({
       status: "INFERRED",
     });
     expect(result.analysis.human_review_required).toBe(true);
+    expect(result.analysis.safety.medical_judgement).toBe(false);
     expect(analysisNeedsFollowUp(result.analysis)).toBe(true);
   });
 
-  it("CASE 57: 복수 시간 발화는 Phase 3C 정책대로 시간을 확정하지 않는다", async () => {
+  it("Phase 3C 정책 유지: 복수 시간 발화는 시간을 확정하지 않는다", async () => {
     const result = await analyzeIntakeRequest(
       { caller_phone: "", transcript: "10시에 진료 보고 9시에 출발해요" },
-      { intakeId: "TEST-CASE-57" },
+      { intakeId: "TEST-CASE-57-REGRESSION" },
     );
     expect(result.analysis.appointment.time).toMatchObject({
       value: null,
       status: "NEEDS_CONFIRMATION",
     });
-    expect(analysisNeedsFollowUp(result.analysis)).toBe(true);
   });
 
-  it("보안: 중복 recording callback은 분석을 재실행하지 않고 안내 XML을 반환한다", async () => {
-    const fields = recordingFields();
-    const first = await recordingCompletePost(
-      signedFormRequest("/api/v1/phone/recording-complete", fields),
-    );
-    const second = await recordingCompletePost(
-      signedFormRequest("/api/v1/phone/recording-complete", fields),
-    );
-    const xml = await second.text();
-
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(xml).toContain("<Hangup/>");
-    expect(routeAnalyzeMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("보안: STT 실패 시 기술 오류 대신 안내 TTS로 종료하고 세부를 노출하지 않는다", async () => {
-    routeTranscribeMock.mockRejectedValueOnce(
-      new Error("OpenAI raw error sk-FAKE123 stack trace"),
-    );
+  it("보안: 즉시 응답 TTS에 확정 표현이 없다", async () => {
     const response = await recordingCompletePost(
       signedFormRequest("/api/v1/phone/recording-complete", recordingFields()),
     );
     const xml = await response.text();
 
     expect(response.status).toBe(200);
-    expect(xml).toContain(CLAWOPS_MESSAGES.failure);
-    expect(xml).not.toMatch(/sk-|stack|OpenAI/);
+    for (const banned of ["완료되었습니다", "확정"]) {
+      expect(xml).not.toContain(banned);
+    }
+  });
+
+  it("보안: 잘못된 서명의 recording callback은 background를 예약하지 않는다", async () => {
+    const response = await recordingCompletePost(
+      signedFormRequest(
+        "/api/v1/phone/recording-complete",
+        recordingFields(),
+        { signature: "bad==" },
+      ),
+    );
+    expect(response.status).toBe(401);
+    expect(backgroundTasks).toHaveLength(0);
+    expect(routeDownloadMock).not.toHaveBeenCalled();
+  });
+
+  it("보안: 안전하지 않은 RecordingUrl은 background 없이 안내로 종료한다", async () => {
+    for (const recordingUrl of [
+      "http://recordings.example.com/a.mp3",
+      "https://127.0.0.1/a.mp3",
+      "https://[::ffff:127.0.0.1]/a.mp3",
+    ]) {
+      const response = await recordingCompletePost(
+        signedFormRequest(
+          "/api/v1/phone/recording-complete",
+          recordingFields({ RecordingUrl: recordingUrl }),
+        ),
+      );
+      const xml = await response.text();
+      expect(response.status, recordingUrl).toBe(200);
+      expect(xml, recordingUrl).toContain(CLAWOPS_MESSAGES.failure);
+    }
+    expect(backgroundTasks).toHaveLength(0);
+    expect(routeDownloadMock).not.toHaveBeenCalled();
   });
 
   it("보안: 로그에 발신번호·RecordingUrl·transcript·secret을 남기지 않는다", async () => {
@@ -518,6 +571,7 @@ describe("ClawOps recording callback", () => {
         }),
       ),
     );
+    await flushBackground();
     await statusPost(
       signedFormRequest("/api/v1/phone/status", {
         CallId: uniqueCallId(),
@@ -545,7 +599,20 @@ describe("ClawOps recording callback", () => {
 });
 
 describe("ClawOps status callback", () => {
-  it("문서 상태들을 provider-neutral 상태로 매핑해 수신 처리한다", async () => {
+  it("CASE 63: 실통화에서 확인된 in-progress 상태를 answered로 수용한다", async () => {
+    const response = await statusPost(
+      signedFormRequest("/api/v1/phone/status", {
+        CallId: uniqueCallId(),
+        CallStatus: "in-progress",
+      }),
+    );
+    const payload = (await response.json()) as { status?: string };
+
+    expect(response.status).toBe(200);
+    expect(payload.status).toBe("answered");
+  });
+
+  it("CASE 64: 기존 문서 상태들의 매핑 regression PASS", async () => {
     const cases: Array<[string, string]> = [
       ["initiated", "ringing"],
       ["ringing", "ringing"],

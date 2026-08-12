@@ -12,12 +12,14 @@ function errorResponse(status: number, message: string) {
   );
 }
 
-// 문서로 확인된 ClawOps CallStatus만 대응한다. initiated는 통화 시도 시작,
-// rejected는 수신 거절이므로 각각 ringing/failed로 매핑한다.
+// 문서·실통화로 확인된 ClawOps CallStatus만 대응한다. initiated는 통화 시도
+// 시작, rejected는 수신 거절, in-progress는 통화 진행 중(실전화 payload에서
+// 확인)이므로 기존 provider-neutral 상태 중 answered로 매핑한다.
 const CLAWOPS_STATUS_MAP: Record<string, PhoneCallStatus> = {
   initiated: "ringing",
   ringing: "ringing",
   answered: "answered",
+  "in-progress": "answered",
   completed: "completed",
   busy: "busy",
   failed: "failed",
