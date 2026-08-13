@@ -131,7 +131,7 @@ describe("transcribeAudioFile provider unit", () => {
     await expect(
       transcribeAudioFile(
         fakeWebmFile(64),
-        { apiKey: null, model: "gpt-4o-mini-transcribe", timeoutMs: 15_000 },
+        { provider: "openai" as const, teamBaseUrl: "http://localhost:8000", teamTimeoutMs: 30_000, apiKey: null, model: "gpt-4o-mini-transcribe", timeoutMs: 15_000 },
         call,
       ),
     ).rejects.toMatchObject({ code: "OPENAI_API_KEY_MISSING" });
@@ -142,7 +142,7 @@ describe("transcribeAudioFile provider unit", () => {
     await expect(
       transcribeAudioFile(
         fakeWebmFile(64),
-        { apiKey: "test-key", model: "gpt-4o-mini-transcribe", timeoutMs: 15_000 },
+        { provider: "openai" as const, teamBaseUrl: "http://localhost:8000", teamTimeoutMs: 30_000, apiKey: "test-key", model: "gpt-4o-mini-transcribe", timeoutMs: 15_000 },
         async () => ({ text: "  " }),
       ),
     ).rejects.toMatchObject({ code: "STT_EMPTY_TRANSCRIPT" });
@@ -152,7 +152,7 @@ describe("transcribeAudioFile provider unit", () => {
     await expect(
       transcribeAudioFile(
         fakeWebmFile(64),
-        { apiKey: "test-key", model: "gpt-4o-mini-transcribe", timeoutMs: 15_000 },
+        { provider: "openai" as const, teamBaseUrl: "http://localhost:8000", teamTimeoutMs: 30_000, apiKey: "test-key", model: "gpt-4o-mini-transcribe", timeoutMs: 15_000 },
         async () => {
           throw new Error("network down");
         },

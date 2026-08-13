@@ -12,7 +12,10 @@ export type ProviderErrorCode =
   | "OPENAI_MALFORMED_OUTPUT"
   | "OPENAI_SCHEMA_VALIDATION"
   | "EVIDENCE_REF_VIOLATION"
-  | "OPENAI_UNKNOWN";
+  | "OPENAI_UNKNOWN"
+  | "TEAM_BACKEND_UNAVAILABLE"
+  | "TEAM_BACKEND_TIMEOUT"
+  | "TEAM_RESPONSE_INVALID";
 
 export class IntakeProviderError extends Error {
   readonly code: ProviderErrorCode;

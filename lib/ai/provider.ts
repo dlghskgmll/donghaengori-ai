@@ -8,6 +8,7 @@ import type { AnalyzeIntakeInput } from "./schema";
 import type { IntakeAnalysis, IntakeProviderName } from "./schema";
 import { analyzeMockIntake } from "./mockProvider";
 import { OpenAIIntakeAnalysisProvider } from "./openaiProvider";
+import { TeamIntakeAnalysisProvider } from "./teamProvider";
 
 export interface MatchedPersonContext {
   person: Person;
@@ -58,6 +59,7 @@ export interface IntakeProviderRoute {
 export interface IntakeProviderFactories {
   mock?: () => IntakeAnalysisProvider;
   openai?: (config: IntakeAIConfig) => IntakeAnalysisProvider;
+  team?: (config: IntakeAIConfig) => IntakeAnalysisProvider;
 }
 
 export function resolveIntakeProviderRoute(
@@ -74,6 +76,25 @@ export function resolveIntakeProviderRoute(
         timeoutMs: resolvedConfig.timeoutMs,
         maxRetries: resolvedConfig.maxRetries,
       }));
+  const createTeam =
+    factories.team ??
+    ((resolvedConfig) =>
+      new TeamIntakeAnalysisProvider({
+        baseUrl: resolvedConfig.teamBaseUrl,
+        timeoutMs: resolvedConfig.teamTimeoutMs,
+      }));
+
+  // Team AI backend는 API key가 필요 없다. 실패 시 기존 fallback 정책을 따른다.
+  if (config.provider === "team") {
+    return {
+      requestedProvider: "team",
+      primary: createTeam(config),
+      fallback: config.fallbackToMock ? createMock() : null,
+      initialFallbackUsed: false,
+      warnings: [],
+      model: "team-backend",
+    };
+  }
 
   if (config.provider === "mock") {
     return {

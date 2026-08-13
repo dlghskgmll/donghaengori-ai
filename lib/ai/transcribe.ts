@@ -20,25 +20,39 @@ export class TranscriptionError extends Error {
   }
 }
 
+export type SttProviderName = "openai" | "team";
+
 export interface TranscriptionConfig {
+  provider: SttProviderName;
   apiKey: string | null;
   model: string;
   timeoutMs: number;
+  teamBaseUrl: string;
+  teamTimeoutMs: number;
+}
+
+function parseTimeout(raw: string | undefined, fallback: number, max: number) {
+  const parsed = raw?.trim() ? Number(raw) : NaN;
+  return Number.isInteger(parsed) && parsed >= 1_000 && parsed <= max
+    ? parsed
+    : fallback;
 }
 
 export function loadTranscriptionConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): TranscriptionConfig {
-  const timeoutRaw = environment.OPENAI_TIMEOUT_MS?.trim();
-  const timeoutParsed = timeoutRaw ? Number(timeoutRaw) : NaN;
-
+  const providerRaw = environment.STT_PROVIDER?.trim().toLowerCase();
   return {
+    // 기본은 기존 OpenAI STT 유지 — STT_PROVIDER=team으로 팀 backend 전환,
+    // STT_PROVIDER=openai로 언제든 rollback 가능하다.
+    provider: providerRaw === "team" ? "team" : "openai",
     apiKey: environment.OPENAI_API_KEY?.trim() || null,
     model: environment.OPENAI_TRANSCRIBE_MODEL?.trim() || "gpt-4o-mini-transcribe",
-    timeoutMs:
-      Number.isInteger(timeoutParsed) && timeoutParsed >= 1_000 && timeoutParsed <= 60_000
-        ? timeoutParsed
-        : 15_000,
+    timeoutMs: parseTimeout(environment.OPENAI_TIMEOUT_MS, 15_000, 60_000),
+    teamBaseUrl: (environment.TEAM_AI_BASE_URL?.trim() || "http://localhost:8000")
+      .replace(/\/+$/, ""),
+    // local faster-whisper는 첫 요청 warmup이 느릴 수 있어 별도 timeout.
+    teamTimeoutMs: parseTimeout(environment.TEAM_AI_TIMEOUT_MS, 30_000, 120_000),
   };
 }
 
@@ -66,8 +80,34 @@ function classifyTranscriptionError(error: unknown): TranscriptionError {
 
 export interface TranscriptionResult {
   transcript: string;
-  provider_used: "openai";
+  provider_used: SttProviderName;
   model: string;
+}
+
+// Team backend /api/stt (local faster-whisper) 호출. key가 필요 없다.
+function teamTranscriptionCall(config: TranscriptionConfig): TranscriptionCall {
+  return async ({ file: audioFile }) => {
+    const form = new FormData();
+    form.append("file", audioFile);
+    let response: Response;
+    try {
+      response = await fetch(`${config.teamBaseUrl}/api/stt`, {
+        method: "POST",
+        body: form,
+        signal: AbortSignal.timeout(config.teamTimeoutMs),
+      });
+    } catch (error) {
+      throw classifyTranscriptionError(error);
+    }
+    if (!response.ok) {
+      throw new TranscriptionError(
+        "STT_PROVIDER_FAILED",
+        "Team 음성 변환 호출에 실패했습니다.",
+      );
+    }
+    const payload = (await response.json()) as { text?: unknown };
+    return { text: typeof payload.text === "string" ? payload.text : "" };
+  };
 }
 
 export async function transcribeAudioFile(
@@ -75,6 +115,28 @@ export async function transcribeAudioFile(
   config: TranscriptionConfig = loadTranscriptionConfig(),
   call?: TranscriptionCall,
 ): Promise<TranscriptionResult> {
+  if (config.provider === "team") {
+    const doTeamCall = call ?? teamTranscriptionCall(config);
+    let teamText: string;
+    try {
+      ({ text: teamText } = await doTeamCall({ file, model: "faster-whisper" }));
+    } catch (error) {
+      throw classifyTranscriptionError(error);
+    }
+    const teamTranscript = teamText.trim();
+    if (!teamTranscript) {
+      throw new TranscriptionError(
+        "STT_EMPTY_TRANSCRIPT",
+        "음성에서 텍스트를 인식하지 못했습니다.",
+      );
+    }
+    return {
+      transcript: teamTranscript,
+      provider_used: "team",
+      model: "faster-whisper",
+    };
+  }
+
   const apiKey = config.apiKey;
   if (!apiKey) {
     throw new TranscriptionError(

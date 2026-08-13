@@ -37,6 +37,8 @@ function config(overrides: Partial<IntakeAIConfig> = {}): IntakeAIConfig {
     timeoutMs: 15_000,
     maxRetries: 1,
     fallbackToMock: true,
+    teamBaseUrl: "http://localhost:8000",
+    teamTimeoutMs: 30_000,
     ...overrides,
   };
 }

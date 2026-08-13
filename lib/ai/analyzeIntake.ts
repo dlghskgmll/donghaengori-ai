@@ -133,8 +133,10 @@ export async function analyzeIntakeRequest(
           )
         : asProviderError(error);
 
+    const fallbackCapablePrimary =
+      route.primary.name === "openai" || route.primary.name === "team";
     if (
-      route.primary.name !== "openai" ||
+      !fallbackCapablePrimary ||
       !route.fallback ||
       !providerError.fallbackEligible
     ) {

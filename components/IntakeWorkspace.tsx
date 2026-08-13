@@ -133,7 +133,9 @@ export function IntakeWorkspace() {
                       ? "Fallback"
                       : meta.provider_used === "openai"
                         ? "OpenAI"
-                        : "Mock"}
+                        : meta.provider_used === "team"
+                          ? "Team AI"
+                          : "Mock"}
                   </span>
                   <span>
                     처리시간 · {(meta.total_latency_ms / 1000).toFixed(1)}초

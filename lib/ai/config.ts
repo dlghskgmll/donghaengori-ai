@@ -8,11 +8,20 @@ export interface IntakeAIConfig {
   timeoutMs: number;
   maxRetries: number;
   fallbackToMock: boolean;
+  // Team AI backend (FastAPI) 연동 설정. local 모델 warmup 때문에
+  // OpenAI timeout과 별도로 둔다.
+  teamBaseUrl: string;
+  teamTimeoutMs: number;
 }
 
 function parseProvider(value: string | undefined): IntakeProviderMode {
   const provider = value?.trim() || "mock";
-  if (provider === "mock" || provider === "openai" || provider === "auto") {
+  if (
+    provider === "mock" ||
+    provider === "openai" ||
+    provider === "auto" ||
+    provider === "team"
+  ) {
     return provider;
   }
 
@@ -81,6 +90,15 @@ export function loadIntakeAIConfig(
       "AI_FALLBACK_TO_MOCK",
       environment.AI_FALLBACK_TO_MOCK,
       true,
+    ),
+    teamBaseUrl: (environment.TEAM_AI_BASE_URL?.trim() || "http://localhost:8000")
+      .replace(/\/+$/, ""),
+    teamTimeoutMs: parseInteger(
+      "TEAM_AI_TIMEOUT_MS",
+      environment.TEAM_AI_TIMEOUT_MS,
+      30_000,
+      1_000,
+      120_000,
     ),
   };
 }

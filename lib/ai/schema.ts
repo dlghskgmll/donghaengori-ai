@@ -91,8 +91,8 @@ export const AnalyzeIntakeInputSchema = z.object({
     .optional(),
 });
 
-export const IntakeProviderModeSchema = z.enum(["mock", "openai", "auto"]);
-export const IntakeProviderNameSchema = z.enum(["mock", "openai"]);
+export const IntakeProviderModeSchema = z.enum(["mock", "openai", "auto", "team"]);
+export const IntakeProviderNameSchema = z.enum(["mock", "openai", "team"]);
 
 export const IntakeResponseMetaSchema = z.object({
   requested_provider: IntakeProviderModeSchema,
