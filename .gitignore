@@ -39,3 +39,6 @@ next-env.d.ts
 *.tsbuildinfo
 /outputs/
 /work/
+
+# Claude Design 원본 export (약 4.2MB 번들) — 경량 reference만 추적한다
+design-reference/donghaengori-prototype.html
