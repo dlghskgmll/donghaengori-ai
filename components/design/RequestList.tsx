@@ -27,6 +27,8 @@ interface RequestListProps {
   selectedId: string | null;
   filter: RequestFilter;
   summary: string;
+  listError?: string | null;
+  onRefresh?: () => void;
   onFilter: (filter: RequestFilter) => void;
   onSelect: (id: string) => void;
   onNewIntake: () => void;
@@ -38,6 +40,8 @@ export function RequestList({
   selectedId,
   filter,
   summary,
+  listError,
+  onRefresh,
   onFilter,
   onSelect,
   onNewIntake,
@@ -76,10 +80,23 @@ export function RequestList({
         </div>
       </div>
 
+      {listError ? (
+        <div className="dc-list-error" role="alert">
+          <span>{listError}</span>
+          {onRefresh ? (
+            <button type="button" className="dc-list-retry" onClick={onRefresh}>
+              다시 시도
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="dc-list-rows">
         {rows.length === 0 ? (
           <p className="dc-list-empty">
-            아직 요청이 없습니다. ‘새 요청 접수’로 시작해 주세요.
+            {listError
+              ? "저장된 요청을 표시할 수 없습니다."
+              : "아직 저장된 요청이 없습니다. ‘새 요청 접수’로 시작해 주세요."}
           </p>
         ) : (
           rows.map((row) => (
