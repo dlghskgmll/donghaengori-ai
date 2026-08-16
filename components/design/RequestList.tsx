@@ -28,6 +28,8 @@ interface RequestListProps {
   filter: RequestFilter;
   summary: string;
   listError?: string | null;
+  /** 방금 도착한 저장 접수 안내. 잠깐 떴다 사라진다. */
+  newArrivalLabel?: string | null;
   onRefresh?: () => void;
   onFilter: (filter: RequestFilter) => void;
   onSelect: (id: string) => void;
@@ -41,6 +43,7 @@ export function RequestList({
   filter,
   summary,
   listError,
+  newArrivalLabel,
   onRefresh,
   onFilter,
   onSelect,
@@ -52,7 +55,19 @@ export function RequestList({
       <div className="dc-list-head">
         <div className="dc-list-title">
           <span className="dc-list-title-main">요청</span>
-          <span className="dc-list-title-sub">{summary}</span>
+          <span
+            className={`dc-list-title-sub${newArrivalLabel ? " is-new" : ""}`}
+            role={newArrivalLabel ? "status" : undefined}
+          >
+            {newArrivalLabel ? (
+              <>
+                <span className="dc-list-new-dot" aria-hidden="true" />
+                <span className="dc-list-new-text">{newArrivalLabel}</span>
+              </>
+            ) : (
+              summary
+            )}
+          </span>
         </div>
 
         <button

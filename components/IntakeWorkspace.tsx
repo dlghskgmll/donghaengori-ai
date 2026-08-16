@@ -1,17 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { LoaderCircle } from "lucide-react";
 import {
   AnalyzeIntakeApiResponseSchema,
   IntakeAnalysisSchema,
-  type IntakeAnalysis,
-  type IntakeResponseMeta,
 } from "@/lib/ai/schema";
 import type {
   SavedIntakeDetailView,
   SavedIntakeSummary,
 } from "@/lib/ai/savedIntakeView";
+import {
+  describeNewArrival,
+  initialRequestInboxState,
+  requestInboxReducer,
+  type PreviewRecord,
+} from "@/lib/ui/requestInbox";
+import {
+  SavedIntakePoller,
+  type SavedIntakePollUpdate,
+} from "@/lib/ui/savedIntakePolling";
 import { AppShell, type ShellTab } from "./design/AppShell";
 import { IntakeComposer, type IntakeComposerValues } from "./design/IntakeComposer";
 import { PlaceholderTab } from "./design/PlaceholderTab";
@@ -24,49 +39,32 @@ import {
 } from "./design/RequestList";
 import { summarizeNeeds, buildDesignGroups } from "./design/analysisFields";
 
-/** 브라우저에서 방금 분석한 결과. save:false라 backend에 저장되지 않는다. */
-interface PreviewRecord {
-  kind: "preview";
-  id: string;
-  analysis: IntakeAnalysis;
-  meta: IntakeResponseMeta | null;
-  transcript: string;
-  callerPhone: string;
-  receivedAt: Date;
+/** 새 접수 안내를 띄워 두는 시간. 읽고 넘어갈 만큼만 짧게 남긴다. */
+const NEW_ARRIVAL_VISIBLE_MS = 3500;
+
+function errorMessageOf(payload: unknown, fallback: string): string {
+  return typeof payload === "object" &&
+    payload !== null &&
+    "error" in payload &&
+    typeof payload.error === "string"
+    ? payload.error
+    : fallback;
 }
 
-/** 저장된 접수 목록을 가져온다. state를 건드리지 않는 순수 함수다. */
-async function fetchSavedList(): Promise<{
-  list: SavedIntakeSummary[];
-  error: string | null;
-}> {
-  try {
-    const response = await fetch("/api/v1/intakes");
-    const payload: unknown = await response.json();
-    if (!response.ok) {
-      const message =
-        typeof payload === "object" &&
-        payload !== null &&
-        "error" in payload &&
-        typeof payload.error === "string"
-          ? payload.error
-          : "요청 목록을 불러오지 못했습니다.";
-      throw new Error(message);
-    }
-    const list =
-      typeof payload === "object" && payload !== null && "intakes" in payload
-        ? ((payload as { intakes: SavedIntakeSummary[] }).intakes ?? [])
-        : [];
-    return { list, error: null };
-  } catch (error) {
-    return {
-      list: [],
-      error:
-        error instanceof Error
-          ? error.message
-          : "요청 목록을 불러오지 못했습니다.",
-    };
+/** 저장된 접수 목록을 읽는다. 실패하면 던진다 — 판단은 poller가 한다. */
+async function fetchSavedList(
+  signal: AbortSignal,
+): Promise<SavedIntakeSummary[]> {
+  const response = await fetch("/api/v1/intakes", { signal });
+  const payload: unknown = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      errorMessageOf(payload, "요청 목록을 불러오지 못했습니다."),
+    );
   }
+  return typeof payload === "object" && payload !== null && "intakes" in payload
+    ? ((payload as { intakes: SavedIntakeSummary[] }).intakes ?? [])
+    : [];
 }
 
 function timeLabel(date: Date) {
@@ -119,12 +117,13 @@ function savedRow(item: SavedIntakeSummary): RequestRow {
 export function IntakeWorkspace() {
   const [tab, setTab] = useState<ShellTab>("request");
 
-  const [saved, setSaved] = useState<SavedIntakeSummary[]>([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const [inbox, dispatch] = useReducer(
+    requestInboxReducer,
+    initialRequestInboxState,
+  );
+  const { saved, previews, selectedId, listLoading, listError, connectionLost } =
+    inbox;
 
-  const [previews, setPreviews] = useState<PreviewRecord[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [composerSeed, setComposerSeed] = useState<IntakeComposerValues>();
   const [filter, setFilter] = useState<RequestFilter>("all");
@@ -136,31 +135,39 @@ export function IntakeWorkspace() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
-  const applyList = useCallback(
-    (result: { list: SavedIntakeSummary[]; error: string | null }) => {
-      setSaved(result.list);
-      setListError(result.error);
-      setListLoading(false);
-    },
-    [],
-  );
+  const pollerRef = useRef<SavedIntakePoller | null>(null);
 
-  const loadList = useCallback(async () => {
-    setListLoading(true);
-    applyList(await fetchSavedList());
-  }, [applyList]);
+  const handlePollUpdate = useCallback((update: SavedIntakePollUpdate) => {
+    dispatch({ type: "poll", update });
+  }, []);
 
+  // 요청 탭에 있는 동안만 저장 접수를 다시 읽는다.
+  // 탭을 벗어나거나 화면이 사라지면 stop() — 이후 도착하는 응답은 버려진다.
   useEffect(() => {
-    let cancelled = false;
-    // state 변경은 await 이후에만 일어난다 — effect 안에서 동기 setState를 하면
-    // 연쇄 렌더가 발생한다.
-    void fetchSavedList().then((result) => {
-      if (!cancelled) applyList(result);
+    if (tab !== "request") return;
+
+    const poller = new SavedIntakePoller({
+      fetchList: fetchSavedList,
+      onUpdate: handlePollUpdate,
     });
+    pollerRef.current = poller;
+    poller.start();
+
     return () => {
-      cancelled = true;
+      poller.stop();
+      if (pollerRef.current === poller) pollerRef.current = null;
     };
-  }, [applyList]);
+  }, [tab, handlePollUpdate]);
+
+  // 새 접수 안내는 잠깐만 남긴다.
+  useEffect(() => {
+    if (inbox.arrived === null) return;
+    const timer = setTimeout(
+      () => dispatch({ type: "arrivalDismissed" }),
+      NEW_ARRIVAL_VISIBLE_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [inbox.arrived]);
 
   const loadDetail = useCallback(async (savedId: number) => {
     setDetailLoading(true);
@@ -169,14 +176,9 @@ export function IntakeWorkspace() {
       const response = await fetch(`/api/v1/intakes/${savedId}`);
       const payload: unknown = await response.json();
       if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "요청 내용을 불러오지 못했습니다.";
-        throw new Error(message);
+        throw new Error(
+          errorMessageOf(payload, "요청 내용을 불러오지 못했습니다."),
+        );
       }
       setDetail(payload as SavedIntakeDetailView);
     } catch (error) {
@@ -208,6 +210,7 @@ export function IntakeWorkspace() {
   const pendingCount = rows.filter(
     (row) => row.badge === "확인 필요" || row.badge === "긴급",
   ).length;
+  const arrivalLabel = inbox.arrived ? describeNewArrival(inbox.arrived) : null;
 
   const handleAnalyze = async (values: IntakeComposerValues) => {
     setIsAnalyzing(true);
@@ -222,14 +225,9 @@ export function IntakeWorkspace() {
       const payload: unknown = await response.json();
 
       if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "접수 내용을 분석하지 못했습니다.";
-        throw new Error(message);
+        throw new Error(
+          errorMessageOf(payload, "접수 내용을 분석하지 못했습니다."),
+        );
       }
 
       const validated = AnalyzeIntakeApiResponseSchema.safeParse(payload);
@@ -247,8 +245,7 @@ export function IntakeWorkspace() {
         receivedAt: new Date(),
       };
 
-      setPreviews((current) => [record, ...current]);
-      setSelectedId(record.id);
+      dispatch({ type: "previewAdded", record });
       setIsComposing(false);
       setComposerSeed(undefined);
     } catch (error) {
@@ -263,7 +260,7 @@ export function IntakeWorkspace() {
   };
 
   const handleSelect = (id: string) => {
-    setSelectedId(id);
+    dispatch({ type: "selected", id });
     setIsComposing(false);
     if (id.startsWith("saved-")) {
       void loadDetail(Number(id.slice("saved-".length)));
@@ -361,16 +358,22 @@ export function IntakeWorkspace() {
             summary={
               listLoading
                 ? "불러오는 중"
-                : `저장 ${saved.length}건${previews.length > 0 ? ` · 미리보기 ${previews.length}건` : ""}`
+                : connectionLost
+                  ? "연결 확인 중"
+                  : `저장 ${saved.length}건${previews.length > 0 ? ` · 미리보기 ${previews.length}건` : ""}`
             }
             listError={listError}
-            onRefresh={() => void loadList()}
+            newArrivalLabel={arrivalLabel}
+            onRefresh={() => {
+              dispatch({ type: "refreshRequested" });
+              pollerRef.current?.refresh();
+            }}
             onFilter={setFilter}
             onSelect={handleSelect}
             onNewIntake={() => {
               setComposerSeed(undefined);
               setAnalyzeError(null);
-              setSelectedId(null);
+              dispatch({ type: "selected", id: null });
               setIsComposing(true);
             }}
             isComposing={isComposing}

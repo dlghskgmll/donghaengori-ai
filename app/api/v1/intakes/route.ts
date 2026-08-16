@@ -8,6 +8,17 @@ import { fetchTeamIntakes } from "@/lib/ai/teamIntakeRead";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200; // 팀 API가 le=200으로 제한한다.
 
+// UI가 5초마다 이 경로를 다시 읽는다. backend가 꺼져 있는 동안 같은 실패를
+// 매번 찍으면 로그가 의미를 잃는다 — 상태가 바뀔 때만 남긴다.
+let lastFailureCode: string | null = null;
+
+function logFailureOnce(code: string) {
+  if (lastFailureCode === code) return;
+  lastFailureCode = code;
+  // backend URL·stack은 남기지 않는다.
+  console.error("saved intake list failed", { code });
+}
+
 function errorResponse(status: number, message: string) {
   return Response.json(
     { error: message },
@@ -24,6 +35,7 @@ export async function GET(request: Request) {
 
   try {
     const rows = await fetchTeamIntakes(parsed);
+    lastFailureCode = null;
     return Response.json(
       { intakes: rows.map(toSavedIntakeSummary) },
       { status: 200, headers: { "Cache-Control": "no-store" } },
@@ -31,8 +43,7 @@ export async function GET(request: Request) {
   } catch (error) {
     const code =
       error instanceof IntakeProviderError ? error.code : "TEAM_READ_UNKNOWN";
-    // backend URL·stack은 남기지 않는다.
-    console.error("saved intake list failed", { code });
+    logFailureOnce(code);
     return errorResponse(502, "요청 목록을 불러오지 못했습니다.");
   }
 }

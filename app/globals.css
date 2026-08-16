@@ -1561,9 +1561,22 @@ button:disabled {
 }
 
 .dc-list-title-sub {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   color: #78716c;
   white-space: nowrap;
+}
+
+.dc-list-title-sub.is-new {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c2410c;
+  font-weight: 600;
+  animation: dc-list-new-in 160ms ease-out;
 }
 
 .dc-new-intake {
@@ -2276,4 +2289,28 @@ button:disabled {
   font-size: 12.5px;
   font-weight: 600;
   font-family: inherit;
+}
+
+.dc-list-new-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f97316;
+  flex: none;
+}
+
+.dc-list-new-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes dc-list-new-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
