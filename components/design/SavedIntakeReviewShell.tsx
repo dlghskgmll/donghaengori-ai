@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { SavedIntakeGate } from "@/lib/ai/savedIntakeView";
 import {
   intakeAuditTone,
@@ -69,14 +72,74 @@ function GateBlockers({ gate }: { gate: SavedIntakeGate }) {
   );
 }
 
+/**
+ * 미확인 확정 — **왜 넘어가는지를 받는다.**
+ *
+ * 사고가 났을 때 "연락이 닿지 않았다" 와 "물어볼 필요 없다고 봤다" 는 책임이
+ * 전혀 다른데, 감사 로그에 '미확인 확정' 만 남으면 그 둘을 구분할 수 없다.
+ * 사유를 고르기 전에는 버튼이 눌리지 않는다.
+ */
+const ACK_REASONS = [
+  "연락이 닿지 않음",
+  "이미 알고 있음",
+  "물어볼 필요 없음",
+  "기타",
+] as const;
+
+function AcknowledgeAction({
+  connected,
+  busy,
+  onConfirm,
+}: {
+  connected: boolean;
+  busy: boolean;
+  onConfirm?: (acknowledge: boolean, reason: string | null) => void;
+}) {
+  const [reason, setReason] = useState("");
+  return (
+    <div className="dc-final-ack">
+      <label className="dc-final-ack-label" htmlFor="ack-reason">
+        넘어가는 이유
+      </label>
+      <select
+        id="ack-reason"
+        value={reason}
+        disabled={!connected || busy}
+        onChange={(event) => setReason(event.target.value)}
+      >
+        <option value="">이유를 고르세요</option>
+        {ACK_REASONS.map((value) => (
+          <option key={value} value={value}>{value}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="dc-btn-warning"
+        disabled={!connected || busy || !reason}
+        onClick={connected && reason ? () => onConfirm?.(true, reason) : undefined}
+      >
+        {busy ? "확정하는 중…" : "미확인 상태로 확정"}
+      </button>
+    </div>
+  );
+}
+
 export function SavedIntakeFinalization({
   confirmed,
   gate,
+  onConfirm,
+  busy = false,
+  error = null,
 }: {
   confirmed: boolean;
   gate: SavedIntakeGate | null;
+  /** 확정을 실제로 보낸다. 없으면 예전처럼 비활성으로 그린다. */
+  onConfirm?: (acknowledge: boolean, reason: string | null) => void;
+  busy?: boolean;
+  error?: string | null;
 }) {
   const mode = intakeFinalizationMode(confirmed, gate);
+  const connected = typeof onConfirm === "function";
 
   if (mode === "confirmed") {
     return (
@@ -134,8 +197,13 @@ export function SavedIntakeFinalization({
                 : "확인 필요 항목이 없어야 진행할 수 있습니다."}
             </span>
           </div>
-          <button type="button" className="dc-btn-primary" disabled>
-            접수카드 확정
+          <button
+            type="button"
+            className="dc-btn-primary"
+            disabled={!connected || busy || mode !== "regular"}
+            onClick={connected ? () => onConfirm(false, null) : undefined}
+          >
+            {busy ? "확정하는 중…" : "접수카드 확정"}
           </button>
         </div>
 
@@ -147,16 +215,26 @@ export function SavedIntakeFinalization({
                 남은 blocker와 위험을 확인한 담당자가 별도로 선택하는 예외 행동입니다.
               </span>
             </div>
-            <button type="button" className="dc-btn-warning" disabled>
-              미확인 상태로 확정
-            </button>
+            <AcknowledgeAction
+              connected={connected}
+              busy={busy}
+              onConfirm={onConfirm}
+            />
           </div>
         ) : null}
       </div>
 
-      <p className="dc-final-write-note">
-        확정 API가 연결되지 않아 두 행동 모두 비활성화되어 있습니다.
-      </p>
+      {error ? (
+        <p className="dc-final-write-note" role="alert">{error}</p>
+      ) : connected ? (
+        <p className="dc-final-write-note">
+          확정은 되돌릴 수 없습니다. 누른 사람과 시각이 처리 이력에 남습니다.
+        </p>
+      ) : (
+        <p className="dc-final-write-note">
+          확정 API가 연결되지 않아 두 행동 모두 비활성화되어 있습니다.
+        </p>
+      )}
     </section>
   );
 }

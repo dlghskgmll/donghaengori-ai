@@ -28,6 +28,7 @@ import {
   type SavedIntakePollUpdate,
 } from "@/lib/ui/savedIntakePolling";
 import {
+  confirmSavedIntake,
   fetchSavedDetail,
   fetchSavedList,
   savedIntakeAuthHeader,
@@ -173,6 +174,8 @@ export function IntakeWorkspace() {
   const [detail, setDetail] = useState<SavedIntakeDetailView | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
@@ -372,6 +375,42 @@ export function IntakeWorkspace() {
     }
   }, []);
 
+  /**
+   * 최종 확정. 확정 값은 **서버가 준 카드에서 그대로** 가져온다 — 화면에서
+   * 고른 local 작업값을 보내면, 직원이 눌러 본 것이 확정 내용이 되어 버린다.
+   *
+   * 409 는 오류가 아니라 상태다(확인 필요가 남았거나 긴급). 메시지를 그대로
+   * 보여주고 상세를 다시 읽어 게이트를 최신으로 그린다.
+   */
+  const confirmIntake = useCallback(
+    async (savedId: number, acknowledge: boolean, reason: string | null) => {
+      const card = detail;
+      if (!card) return;
+      setConfirmBusy(true);
+      setConfirmError(null);
+      try {
+        await confirmSavedIntake(savedId, {
+          hospital: card.fields.find((f) => f.key === "hospital")?.value ?? "",
+          date: card.fields.find((f) => f.key === "date")?.value ?? "",
+          level: card.needLevel ?? "",
+          acknowledge,
+          acknowledgeReason: reason,
+        });
+        await loadDetail(savedId);
+        setReadRefreshNonce((n) => n + 1);
+      } catch (error) {
+        setConfirmError(
+          error instanceof Error ? error.message : "접수를 확정하지 못했습니다.",
+        );
+        // 막힌 이유가 바뀌었을 수 있다. 최신 게이트로 다시 그린다.
+        await loadDetail(savedId);
+      } finally {
+        setConfirmBusy(false);
+      }
+    },
+    [detail, loadDetail],
+  );
+
   // 저장된 접수와 미리보기를 함께 보여주되 id 체계를 분리해 중복되지 않게 한다.
   const rows = useMemo(() => {
     // 미리보기는 저장조차 되지 않았으므로 확정일 수 없다.
@@ -499,6 +538,15 @@ export function IntakeWorkspace() {
             onRetry={() =>
               void loadDetail(Number(selectedId.slice("saved-".length)))
             }
+            onConfirm={(acknowledge, reason) =>
+              void confirmIntake(
+                Number(selectedId.slice("saved-".length)),
+                acknowledge,
+                reason,
+              )
+            }
+            confirmBusy={confirmBusy}
+            confirmError={confirmError}
           />
         );
       }

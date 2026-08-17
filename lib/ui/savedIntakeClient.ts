@@ -154,3 +154,96 @@ export async function fetchSavedDetail(
   );
   return payload as SavedIntakeDetailView;
 }
+
+/**
+ * 저장된 접수에 대한 **쓰기** — 확정과 통화 확인.
+ *
+ * 읽기와 달리 실패를 조용히 넘기지 않는다. poller 는 실패해도 기존 목록을
+ * 유지하지만, 여기는 사람이 누른 행동이라 결과를 반드시 화면에 말해야 한다.
+ */
+async function authorizedPost(
+  path: string,
+  body: unknown,
+  fallback: string,
+  options: SavedIntakeRequestOptions,
+): Promise<unknown> {
+  const storage = options.storage === undefined ? browserStorage() : options.storage;
+  const authorization = savedIntakeAuthHeader(storage);
+  if (!authorization) {
+    throw new SavedIntakeReadError(401, SAVED_INTAKE_LOGIN_REQUIRED);
+  }
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(path, {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+  try {
+    return await readJson(response, fallback);
+  } catch (error) {
+    if (error instanceof SavedIntakeReadError) {
+      expireDeadSession(error.status, storage);
+      if (error.status === 401) {
+        throw new SavedIntakeReadError(401, SAVED_INTAKE_SESSION_EXPIRED);
+      }
+    }
+    throw error;
+  }
+}
+
+export interface ConfirmSavedIntakeInput {
+  hospital: string;
+  date: string;
+  level: string;
+  acknowledge?: boolean;
+  acknowledgeReason?: string | null;
+}
+
+/**
+ * 최종 확정. **409 는 오류가 아니라 상태다** — 확인 필요가 남았거나 긴급이라
+ * 확정 대상이 아닌 경우다. 화면이 그 메시지를 그대로 보여주고, 게이트가 함께
+ * 오면 무엇이 막는지 다시 그린다.
+ */
+export async function confirmSavedIntake(
+  savedId: number,
+  input: ConfirmSavedIntakeInput,
+  options: Omit<SavedIntakeRequestOptions, "signal"> = {},
+): Promise<void> {
+  await authorizedPost(
+    `/api/v1/intakes/${savedId}/confirm`,
+    {
+      hospital: input.hospital,
+      date: input.date,
+      level: input.level,
+      acknowledge: input.acknowledge ?? false,
+      acknowledge_reason: input.acknowledgeReason ?? null,
+    },
+    "접수를 확정하지 못했습니다.",
+    options,
+  );
+}
+
+/**
+ * 통화로 확인한 값을 반영한다 — 게이트를 푸는 유일한 경로.
+ *
+ * **화면에서 값을 고른 것과 다르다.** 이 호출은 감사 로그에 '항목확인' 으로
+ * 남고 카드 근거에 "통화로 확인함" 이 붙는다. 확인 전화를 마치고 들은 값을
+ * 적는 자리에서만 부른다.
+ */
+export async function verifySavedIntakeField(
+  savedId: number,
+  field: "target" | "hospital" | "dept" | "date" | "time",
+  value: string,
+  options: Omit<SavedIntakeRequestOptions, "signal"> = {},
+): Promise<void> {
+  await authorizedPost(
+    `/api/v1/intakes/${savedId}/verify`,
+    { field, value },
+    "확인 결과를 반영하지 못했습니다.",
+    options,
+  );
+}

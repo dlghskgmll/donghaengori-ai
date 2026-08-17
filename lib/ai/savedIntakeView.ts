@@ -72,6 +72,9 @@ export interface SavedIntakeDetailView {
   confirmQuestions: string[];
   notes: string[];
   hospitalDowngraded: boolean;
+  /** 서버가 고른 동행 지원 수준. 확정할 때 그대로 되돌려 보낸다 —
+   *  화면에서 만든 값을 보내면 직원이 눌러 본 것이 확정 내용이 된다. */
+  needLevel?: string | null;
   confirmed: boolean;
   /** Team GET detail이 실제로 준 server gate. 없으면 UI가 추측하지 않는다. */
   gate: SavedIntakeGate | null;
@@ -209,6 +212,7 @@ export function toSavedIntakeDetail(
     confirmQuestions: card?.confirm_questions ?? [],
     notes,
     hospitalDowngraded: hospital.downgraded,
+    needLevel: card?.need_level ?? null,
     confirmed:
       detail.confirmed === 1 || detail.status?.trim() === "확정",
     gate: detail.gate

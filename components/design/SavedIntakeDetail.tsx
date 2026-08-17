@@ -29,6 +29,9 @@ interface SavedIntakeDetailProps {
   onResolutionAction: (action: IntakeFieldResolutionAction) => void;
   auditState: IntakeAuditState;
   onAuditRetry?: () => void;
+  onConfirm?: (acknowledge: boolean, reason: string | null) => void;
+  confirmBusy?: boolean;
+  confirmError?: string | null;
 }
 
 function toResolvableField(
@@ -58,6 +61,9 @@ export function SavedIntakeDetail({
   onResolutionAction,
   auditState,
   onAuditRetry,
+  onConfirm,
+  confirmBusy,
+  confirmError,
 }: SavedIntakeDetailProps) {
   if (isLoading) {
     return (
@@ -180,6 +186,9 @@ export function SavedIntakeDetail({
           <SavedIntakeFinalization
             confirmed={detail.confirmed}
             gate={detail.gate}
+            onConfirm={onConfirm}
+            busy={confirmBusy}
+            error={confirmError}
           />
         </div>
 

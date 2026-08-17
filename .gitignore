@@ -42,3 +42,8 @@ next-env.d.ts
 
 # Claude Design 원본 export (약 4.2MB 번들) — 경량 reference만 추적한다
 design-reference/donghaengori-prototype.html
+
+# Next.js 가 dev 실행 때 자동 생성한다(next.config 의 agentRules).
+# 내 로컬 실행 때문에 남는 파일이라 저장소에 넣지 않는다.
+AGENTS.md
+CLAUDE.md
