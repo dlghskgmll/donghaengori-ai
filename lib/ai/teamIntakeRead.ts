@@ -46,6 +46,34 @@ const TeamSavedCardSchema = z
   })
   .loose();
 
+const TeamGateBlockerSchema = z
+  .object({
+    field: z.string(),
+    label: z.string(),
+    value: z.string().nullable().optional(),
+    spoken: z.string().nullable().optional(),
+    evidence: z.array(z.string()).default([]),
+    question: z.string().nullable().optional(),
+    heard: z
+      .array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+        }),
+      )
+      .default([]),
+  })
+  .loose();
+
+export const TeamIntakeGateSchema = z
+  .object({
+    allowed: z.boolean(),
+    acknowledged: z.boolean(),
+    hard_block: z.boolean(),
+    blockers: z.array(TeamGateBlockerSchema).default([]),
+  })
+  .loose();
+
 // 목록 행에는 card_json이 실리지 않는다(팀 db.list_intakes 주석 참조).
 export const TeamIntakeRowSchema = z
   .object({
@@ -71,11 +99,13 @@ export const TeamIntakeRowSchema = z
 
 export const TeamIntakeDetailSchema = TeamIntakeRowSchema.extend({
   card: TeamSavedCardSchema.nullable().optional(),
+  gate: TeamIntakeGateSchema.nullable().optional(),
 });
 
 export type TeamIntakeRow = z.infer<typeof TeamIntakeRowSchema>;
 export type TeamIntakeDetail = z.infer<typeof TeamIntakeDetailSchema>;
 export type TeamSavedCard = z.infer<typeof TeamSavedCardSchema>;
+export type TeamIntakeGate = z.infer<typeof TeamIntakeGateSchema>;
 
 // ── 병원 안전 정규화 ────────────────────────────────────────────────
 // 팀 backend에 history-only 병원이 '확인됨'으로 저장돼 있을 수 있다
@@ -119,6 +149,61 @@ export interface TeamReadOptions {
   baseUrl?: string;
   timeoutMs?: number;
   fetchImpl?: (url: string, init: RequestInit) => Promise<Response>;
+  /** 브라우저 세션의 Authorization 헤더 원문. Team이 intake.view를 요구한다. */
+  authorization?: string | null;
+}
+
+/**
+ * Team이 상태로 구분해 준 read 실패. 401·403·404를 502로 뭉개면 화면이
+ * "로그인 필요"와 "backend 꺼짐"을 구분하지 못한다.
+ */
+export class TeamIntakeReadError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TeamIntakeReadError";
+  }
+}
+
+/** profile/post-record proxy와 같은 형태만 통과시킨다. */
+function bearerHeader(value: string | null | undefined): string {
+  const header = value?.trim() ?? "";
+  if (!/^Bearer\s+\S+$/i.test(header)) {
+    throw new TeamIntakeReadError(401, "TEAM_AUTH_REQUIRED", "로그인이 필요합니다.");
+  }
+  return header;
+}
+
+function readStatusError(status: number): TeamIntakeReadError {
+  if (status === 401) {
+    return new TeamIntakeReadError(
+      401,
+      "TEAM_SESSION_INVALID",
+      "세션이 만료되었거나 유효하지 않습니다.",
+    );
+  }
+  if (status === 403) {
+    return new TeamIntakeReadError(
+      403,
+      "TEAM_INTAKE_FORBIDDEN",
+      "접수 조회 권한이 없습니다.",
+    );
+  }
+  if (status === 404) {
+    return new TeamIntakeReadError(
+      404,
+      "TEAM_INTAKE_NOT_FOUND",
+      "접수를 찾을 수 없습니다.",
+    );
+  }
+  return new TeamIntakeReadError(
+    502,
+    "TEAM_BACKEND_UNAVAILABLE",
+    "요청 정보를 불러오지 못했습니다.",
+  );
 }
 
 function resolveOptions(options: TeamReadOptions) {
@@ -154,24 +239,21 @@ async function getJson(
   options: TeamReadOptions,
 ): Promise<unknown> {
   const { baseUrl, timeoutMs, fetchImpl } = resolveOptions(options);
+  // 형식이 틀린 토큰은 Team을 부르기 전에 막는다. token은 헤더로만 나간다.
+  const authorization = bearerHeader(options.authorization);
   let response: Response;
   try {
     // path는 호출부에서 검증된 고정 형태만 들어온다(임의 URL 조립 금지).
     response = await fetchImpl(`${baseUrl}${path}`, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", Authorization: authorization },
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     throw classify(error);
   }
 
-  if (!response.ok) {
-    throw new IntakeProviderError(
-      "TEAM_BACKEND_UNAVAILABLE",
-      `Team AI backend가 오류를 반환했습니다 (HTTP ${response.status}).`,
-    );
-  }
+  if (!response.ok) throw readStatusError(response.status);
   return response.json();
 }
 

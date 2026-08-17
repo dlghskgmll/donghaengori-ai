@@ -13,6 +13,8 @@ export interface RequestRow {
   alert?: string | null;
   alertTone?: "warn" | "danger";
   unread?: boolean;
+  /** 서버가 확정했다고 준 값. 배지 유무로 확정을 추측하지 않는다. */
+  confirmed?: boolean;
 }
 
 export type RequestFilter = "all" | "todo" | "done";
@@ -29,6 +31,7 @@ interface RequestListProps {
   filter: RequestFilter;
   summary: string;
   listError?: string | null;
+  loading?: boolean;
   /** 방금 도착한 저장 접수 안내. 잠깐 떴다 사라진다. */
   newArrivalLabel?: string | null;
   onRefresh?: () => void;
@@ -38,12 +41,45 @@ interface RequestListProps {
   isComposing: boolean;
 }
 
+/**
+ * 필터별로 보여 줄 행.
+ *
+ * '확정'은 서버의 confirmed 값으로만 고른다. 배지가 없다는 것은 "확인할 항목이
+ * 없다"는 뜻이지 확정됐다는 뜻이 아니다 — 그걸 섞으면 아직 사람이 확정하지
+ * 않은 접수가 확정 목록에 앉는다.
+ */
+export function filterRequestRows(
+  rows: RequestRow[],
+  filter: RequestFilter,
+): RequestRow[] {
+  if (filter === "todo") {
+    return rows.filter(
+      (row) => row.badge === "확인 필요" || row.badge === "긴급",
+    );
+  }
+  if (filter === "done") return rows.filter((row) => row.confirmed === true);
+  return rows;
+}
+
+export function requestListEmptyMessage(
+  filter: RequestFilter,
+  hasError: boolean,
+  loading = false,
+): string {
+  if (loading) return "요청 목록을 불러오는 중입니다.";
+  if (hasError) return "저장된 요청을 표시할 수 없습니다.";
+  if (filter === "todo") return "확인이 필요한 요청이 없습니다.";
+  if (filter === "done") return "확정된 요청이 없습니다.";
+  return "아직 저장된 요청이 없습니다. ‘새 요청 접수’로 시작해 주세요.";
+}
+
 export function RequestList({
   rows,
   selectedId,
   filter,
   summary,
   listError,
+  loading = false,
   newArrivalLabel,
   onRefresh,
   onFilter,
@@ -109,10 +145,8 @@ export function RequestList({
 
       <div className="dc-list-rows">
         {rows.length === 0 ? (
-          <p className="dc-list-empty">
-            {listError
-              ? "저장된 요청을 표시할 수 없습니다."
-              : "아직 저장된 요청이 없습니다. ‘새 요청 접수’로 시작해 주세요."}
+          <p className="dc-list-empty" role={loading ? "status" : undefined}>
+            {requestListEmptyMessage(filter, Boolean(listError), loading)}
           </p>
         ) : (
           rows.map((row) => (

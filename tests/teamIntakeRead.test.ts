@@ -10,14 +10,24 @@ const teamFetch = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ai/teamIntakeRead", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../lib/ai/teamIntakeRead")>();
+  // route가 넘기는 options(authorization)를 그대로 통과시킨다 — 여기서 지우면
+  // 인증 전달이 검증되지 않는다.
   return {
     ...actual,
-    fetchTeamIntakes: (limit: number) =>
-      actual.fetchTeamIntakes(limit, { fetchImpl: teamFetch }),
-    fetchTeamIntakeDetail: (id: number) =>
-      actual.fetchTeamIntakeDetail(id, { fetchImpl: teamFetch }),
+    fetchTeamIntakes: (
+      limit: number,
+      options: Parameters<typeof actual.fetchTeamIntakes>[1] = {},
+    ) => actual.fetchTeamIntakes(limit, { ...options, fetchImpl: teamFetch }),
+    fetchTeamIntakeDetail: (
+      id: number,
+      options: Parameters<typeof actual.fetchTeamIntakeDetail>[1] = {},
+    ) => actual.fetchTeamIntakeDetail(id, { ...options, fetchImpl: teamFetch }),
   };
 });
+
+/** Team이 intake.view를 요구한다 — read 경로 테스트는 세션을 실어야 한다. */
+const TEST_BEARER = "Bearer test-session-token";
+const AUTH = { Authorization: TEST_BEARER };
 
 const { GET: listGet } = await import("../app/api/v1/intakes/route");
 const { GET: detailGet } = await import("../app/api/v1/intakes/[id]/route");
@@ -59,6 +69,22 @@ function teamRow(overrides: Record<string, unknown> = {}) {
 function teamDetail(overrides: Record<string, unknown> = {}) {
   return {
     ...teamRow(),
+    gate: {
+      allowed: false,
+      acknowledged: false,
+      hard_block: false,
+      blockers: [
+        {
+          field: "time",
+          label: "방문 시각",
+          value: null,
+          spoken: "3시",
+          evidence: ["오전·오후가 모호함"],
+          question: "말씀하신 3시, 오전인가요 오후인가요?",
+          heard: [],
+        },
+      ],
+    },
     card: {
       target: "박순자",
       phone_masked: "010-****-5678",
@@ -103,7 +129,7 @@ describe("saved intake list proxy", () => {
     teamFetch.mockResolvedValue(jsonResponse([teamRow()]));
 
     const response = await listGet(
-      new Request("http://localhost/api/v1/intakes"),
+      new Request("http://localhost/api/v1/intakes", { headers: AUTH }),
     );
     const payload = (await response.json()) as {
       intakes: Array<Record<string, unknown>>;
@@ -120,6 +146,8 @@ describe("saved intake list proxy", () => {
       channel: "전화",
       status: "접수 대기",
       createdAt: "2026-08-14 14:59",
+      appointmentDate: "2026-08-16",
+      confirmed: false,
       urgent: false,
     });
     // backend URL·내부 필드가 새어 나가지 않는다.
@@ -130,7 +158,7 @@ describe("saved intake list proxy", () => {
     teamFetch.mockResolvedValue(jsonResponse({ detail: "boom" }, 500));
 
     const response = await listGet(
-      new Request("http://localhost/api/v1/intakes"),
+      new Request("http://localhost/api/v1/intakes", { headers: AUTH }),
     );
     const payload = (await response.json()) as { error?: string };
 
@@ -143,7 +171,7 @@ describe("saved intake list proxy", () => {
     teamFetch.mockResolvedValue(jsonResponse({ nonsense: true }));
 
     const response = await listGet(
-      new Request("http://localhost/api/v1/intakes"),
+      new Request("http://localhost/api/v1/intakes", { headers: AUTH }),
     );
     const payload = (await response.json()) as { error?: string; intakes?: unknown };
 
@@ -164,7 +192,7 @@ describe("saved intake list proxy", () => {
       jsonResponse([teamRow({ brand_new_field: "미래 확장" })]),
     );
     const response = await listGet(
-      new Request("http://localhost/api/v1/intakes"),
+      new Request("http://localhost/api/v1/intakes", { headers: AUTH }),
     );
     expect(response.status).toBe(200);
   });
@@ -172,9 +200,12 @@ describe("saved intake list proxy", () => {
 
 describe("saved intake detail proxy", () => {
   function detailRequest(id: string) {
-    return detailGet(new Request(`http://localhost/api/v1/intakes/${id}`), {
-      params: Promise.resolve({ id }),
-    });
+    return detailGet(
+      new Request(`http://localhost/api/v1/intakes/${id}`, { headers: AUTH }),
+      {
+        params: Promise.resolve({ id }),
+      },
+    );
   }
 
   it("INTAKE-DETAIL-01: 유효한 id는 상세를 정규화해 반환한다", async () => {
@@ -195,6 +226,22 @@ describe("saved intake detail proxy", () => {
     expect(payload.confirmQuestions).toEqual([
       "어르신, 지난번 가셨던 ○○정형외과의원 맞으실까요?",
     ]);
+    expect(payload.gate).toEqual({
+      allowed: false,
+      acknowledged: false,
+      hardBlock: false,
+      blockers: [
+        {
+          field: "time",
+          label: "방문 시각",
+          value: null,
+          spoken: "3시",
+          evidence: ["오전·오후가 모호함"],
+          question: "말씀하신 3시, 오전인가요 오후인가요?",
+          heard: [],
+        },
+      ],
+    });
   });
 
   it("INTAKE-DETAIL-02: 잘못된 id는 backend 호출 없이 400으로 거절한다", async () => {
@@ -286,6 +333,19 @@ describe("saved intake safety", () => {
     expect(summary.needsConfirmation).toBe(true);
   });
 
+  it("홈용 일정·확정 상태는 Team 목록의 실제 컬럼을 그대로 옮긴다", () => {
+    const summary = toSavedIntakeSummary(
+      teamRow({
+        date_value: "2026-08-19",
+        confirmed: 1,
+        status: "확정",
+      }) as never,
+    );
+
+    expect(summary.appointmentDate).toBe("2026-08-19");
+    expect(summary.confirmed).toBe(true);
+  });
+
   it("값이 없으면 지어내지 않고 확인 필요로 남긴다", () => {
     const view = toSavedIntakeDetail(
       teamDetail({
@@ -311,6 +371,7 @@ describe("fetch 계층", () => {
     await actual.fetchTeamIntakes(50, {
       fetchImpl: spy,
       baseUrl: "http://team.local",
+      authorization: TEST_BEARER,
     });
     expect(spy.mock.calls[0][0]).toBe("http://team.local/api/intakes?limit=50");
     expect(spy.mock.calls[0][1].method).toBe("GET");
@@ -319,6 +380,7 @@ describe("fetch 계층", () => {
     await actual.fetchTeamIntakeDetail(75, {
       fetchImpl: spy,
       baseUrl: "http://team.local",
+      authorization: TEST_BEARER,
     });
     expect(spy.mock.calls[1][0]).toBe("http://team.local/api/intakes/75");
     expect(spy.mock.calls[1][1].method).toBe("GET");

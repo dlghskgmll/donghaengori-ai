@@ -1477,21 +1477,27 @@ button:disabled {
 .dc-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px 20px;
+  gap: 9px;
+  min-height: 32px;
+  /* 좌측 10px는 .dc-nav-item과 같은 기준선을 쓰기 위한 값이다. 바꾸지 않는다. */
+  padding: 0 10px;
+  /* border-box라 padding-bottom은 min-height에 먹힌다. 간격은 margin으로 준다. */
+  margin-bottom: 32px;
 }
 
 .dc-brand-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 5px solid #f97316;
+  width: 30px;
+  height: 30px;
+  aspect-ratio: 1 / 1;
   flex: none;
+  background: url("/brand/donghaengori-logo.png") center / contain no-repeat;
 }
 
 .dc-brand-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
   white-space: nowrap;
 }
 
@@ -1541,10 +1547,57 @@ button:disabled {
 }
 
 .dc-nav-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
   padding: 10px 10px 0;
   font-size: 12px;
   color: #78716c;
   line-height: 1.5;
+}
+
+/* 직원 표기는 nav보다 무거우면 안 된다. 이름만 조금 진하게. */
+.dc-nav-user-name {
+  color: #44403c;
+  font-weight: 600;
+}
+
+.dc-nav-user-role {
+  font-size: 11.5px;
+}
+
+.dc-nav-user-action {
+  margin-top: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #78716c;
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.dc-nav-user-action:hover:not(:disabled) {
+  color: #44403c;
+}
+
+/* 로그인은 유일한 진입점이라 조금 더 또렷하게 — 다만 채운 버튼은 아니다. */
+.dc-nav-user-action.is-login {
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.dc-nav-user-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dc-nav-user-action:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
 }
 
 /* 요청 목록 272px */
@@ -1716,9 +1769,12 @@ button:disabled {
 }
 
 .dc-row-line2 {
+  overflow: hidden;
   font-size: 13px;
   color: #57534e;
   margin-top: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dc-row-alert {
@@ -1728,9 +1784,6 @@ button:disabled {
   margin-top: 3px;
 }
 
-.dc-row-meta {
-  font-size: 12.5px;
-  color: #78716c;
 .dc-row-alert.is-warn {
   color: #a16207;
 }
@@ -1739,7 +1792,13 @@ button:disabled {
   color: #b91c1c;
 }
 
+.dc-row-meta {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: #78716c;
   margin-top: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dc-chip {
@@ -1788,16 +1847,22 @@ button:disabled {
 }
 
 .dc-detail-name {
+  min-width: 0;
+  max-width: min(50%, 520px);
+  overflow: hidden;
   font-size: 21px;
   font-weight: 700;
   color: #1f1d1a;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  flex: none;
 }
 
 .dc-detail-sub {
+  max-width: 260px;
+  overflow: hidden;
   font-size: 13.5px;
   color: #78716c;
+  text-overflow: ellipsis;
   white-space: nowrap;
   flex: none;
 }
@@ -1832,18 +1897,6 @@ button:disabled {
   color: #7f1d1d;
 }
 
-.dc-detail-body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-  padding: 0 36px;
-  gap: 32px;
-  overflow: hidden;
-}
-
-.dc-detail-left {
-  width: 300px;
-  flex: none;
 /* 긴급 결과는 일반 접수카드 대신 사람 확인 안내를 우선한다. */
 .dc-urgent-layout {
   gap: 24px;
@@ -1935,6 +1988,18 @@ button:disabled {
   line-height: 1.5;
 }
 
+.dc-detail-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 0 36px;
+  gap: 32px;
+  overflow: hidden;
+}
+
+.dc-detail-left {
+  width: 300px;
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -2494,6 +2559,1373 @@ button:disabled {
   font-size: 12.5px;
   color: #78716c;
   line-height: 1.6;
+}
+
+/* 홈 — 저장된 접수만으로 만드는 작은 업무 대시보드 */
+.dc-home-head {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dc-home {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 36px 36px;
+}
+
+.dc-home-disconnected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 9px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12.5px;
+}
+
+.dc-home-disconnected button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #92400e;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dc-home-summary {
+  display: flex;
+  margin: 0 0 26px;
+  padding: 0;
+  border-top: 1px solid #e7e5e4;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.dc-home-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 150px;
+  padding: 13px 22px 13px 0;
+}
+
+.dc-home-summary > div + div {
+  padding-left: 22px;
+  border-left: 1px solid #e7e5e4;
+}
+
+.dc-home-summary dt {
+  color: #78716c;
+  font-size: 12.5px;
+}
+
+.dc-home-summary dd {
+  margin: 0;
+  color: #1f1d1a;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.dc-home-section {
+  min-width: 0;
+}
+
+.dc-home-section.is-priority {
+  margin-bottom: 28px;
+}
+
+.dc-home-section.is-recent {
+  margin-top: 28px;
+}
+
+.dc-home-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.dc-home-section-head h2 {
+  margin: 0;
+  color: #1f1d1a;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.dc-home-section-head p {
+  margin: 2px 0 0;
+  color: #78716c;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.dc-home-section-head > span {
+  padding-top: 2px;
+  color: #78716c;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dc-home-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.dc-home-list {
+  border-top: 1px solid #d6d3d1;
+}
+
+.dc-home-request {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 2px;
+  border: 0;
+  border-bottom: 1px solid #e7e5e4;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dc-home-request:hover {
+  background: #fcfbf9;
+}
+
+.dc-home-request:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+.dc-home-request-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dc-home-request-title {
+  overflow: hidden;
+  color: #1f1d1a;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-home-request-context {
+  overflow: hidden;
+  color: #78716c;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-home-request-side {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a8a29e;
+}
+
+.dc-home-request-side .dc-chip {
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+.dc-home-date,
+.dc-home-status {
+  color: #57534e;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dc-home-section-empty {
+  margin: 0;
+  padding: 18px 2px;
+  border-bottom: 1px solid #e7e5e4;
+  color: #78716c;
+  font-size: 12.5px;
+}
+
+.dc-home-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px;
+  color: #78716c;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.dc-home-state.is-error {
+  color: #92400e;
+}
+
+.dc-home-state-title {
+  color: #1f1d1a;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.dc-home-state .dc-btn-primary,
+.dc-home-state .dc-btn-ghost {
+  margin-top: 8px;
+}
+
+/* 일정 — 달력 대신 오늘과 가까운 saved intake를 날짜별로 읽는다. */
+.dc-schedule-head {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dc-schedule {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 36px 40px;
+}
+
+.dc-schedule-section + .dc-schedule-section {
+  margin-top: 30px;
+}
+
+.dc-schedule-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 9px;
+}
+
+.dc-schedule-section-head h2 {
+  margin: 2px 0 0;
+  color: #1f1d1a;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.dc-schedule-section-head > span {
+  color: #78716c;
+  font-size: 12.5px;
+}
+
+.dc-schedule-kicker {
+  color: #c2410c;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.dc-schedule-rows {
+  border-top: 1px solid #d6d3d1;
+}
+
+.dc-schedule-row {
+  width: 100%;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 11px 2px;
+  border: 0;
+  border-bottom: 1px solid #e7e5e4;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dc-schedule-row:hover {
+  background: #fcfbf9;
+}
+
+.dc-schedule-row:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+.dc-schedule-time {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dc-schedule-time.is-normal {
+  color: #1f1d1a;
+}
+
+.dc-schedule-time.is-warn {
+  color: #b45309;
+}
+
+.dc-schedule-time.is-muted {
+  color: #78716c;
+  font-weight: 500;
+}
+
+.dc-schedule-request {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dc-schedule-target {
+  overflow: hidden;
+  color: #1f1d1a;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-schedule-hospital {
+  overflow: hidden;
+  color: #57534e;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-schedule-hospital.is-inferred,
+.dc-schedule-hospital.is-needs_confirmation {
+  color: #92400e;
+}
+
+.dc-schedule-row-side {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #a8a29e;
+}
+
+.dc-schedule-row-side .dc-chip {
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+.dc-schedule-status {
+  color: #57534e;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dc-schedule-empty {
+  margin: 0;
+  padding: 18px 2px;
+  border-top: 1px solid #d6d3d1;
+  border-bottom: 1px solid #e7e5e4;
+  color: #78716c;
+  font-size: 12.5px;
+}
+
+.dc-schedule-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.dc-schedule-group h3 {
+  margin: 0 0 7px;
+  color: #44403c;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+/* 어르신 — 인증된 profile 목록과 선택한 한 사람의 Care Memory만 연다. */
+.dc-elder-head {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dc-profile-login-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.dc-profile-login {
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 30px;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.dc-profile-login h1 {
+  margin: 0 0 5px;
+  color: #1f1d1a;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.dc-profile-login p {
+  margin: 0;
+  color: #78716c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.dc-profile-login label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #44403c;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.dc-profile-login input {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f1d1a;
+  font: inherit;
+  font-weight: 400;
+}
+
+.dc-profile-login input:focus,
+.dc-elder-search input:focus {
+  outline: 2px solid rgba(249, 115, 22, 0.22);
+  border-color: #f97316;
+}
+
+.dc-profile-login .dc-profile-login-error {
+  color: #b91c1c;
+}
+
+.dc-profile-login .dc-profile-login-success {
+  color: #047857;
+  font-weight: 600;
+}
+
+.dc-profile-login .dc-profile-login-note {
+  color: #a8a29e;
+  text-align: center;
+}
+
+.dc-elder-list {
+  width: 272px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+}
+
+.dc-elder-list-head {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 20px 18px 13px;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.dc-elder-list-title-row,
+.dc-elder-list-title-row > div {
+  display: flex;
+  align-items: center;
+}
+
+.dc-elder-list-title-row {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dc-elder-list-title-row > div {
+  gap: 8px;
+}
+
+.dc-elder-list-title-row strong {
+  color: #1f1d1a;
+  font-size: 15px;
+}
+
+.dc-elder-list-title-row span {
+  color: #78716c;
+  font-size: 11.5px;
+}
+
+.dc-icon-button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #e7e5e4;
+  border-radius: 7px;
+  background: #fff;
+  color: #78716c;
+  cursor: pointer;
+}
+
+.dc-icon-button:hover {
+  background: #f5f4f1;
+  color: #44403c;
+}
+
+.dc-elder-search {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+  color: #a8a29e;
+}
+
+.dc-elder-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #1f1d1a;
+  font-size: 12.5px;
+}
+
+.dc-elder-list-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dc-elder-list-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 20px 18px;
+  color: #78716c;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.dc-elder-list-state.is-error {
+  color: #92400e;
+}
+
+.dc-elder-list-state button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dc-elder-row {
+  width: 100%;
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 12px 18px;
+  border: 0;
+  border-bottom: 1px solid #f0eeeb;
+  background: #fff;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dc-elder-row:hover {
+  background: #fcfbf9;
+}
+
+.dc-elder-row.is-selected {
+  background: #fff7ed;
+  box-shadow: inset 3px 0 #f97316;
+}
+
+.dc-elder-row:focus-visible,
+.dc-icon-button:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: -2px;
+}
+
+.dc-elder-row-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dc-elder-row-main strong {
+  overflow: hidden;
+  color: #1f1d1a;
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-elder-row-main span,
+.dc-elder-row-main small {
+  overflow: hidden;
+  color: #78716c;
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-elder-row-main small {
+  color: #a8a29e;
+}
+
+.dc-elder-row-side {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #a8a29e;
+  font-size: 11.5px;
+}
+
+.dc-elder-row-side em {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #f5f4f1;
+  color: #57534e;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.dc-care-reference {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 36px 14px;
+  padding: 9px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #9a3412;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.dc-care-reference strong {
+  flex: none;
+}
+
+.dc-elder-detail-body {
+  gap: 24px;
+}
+
+.dc-elder-detail-body .dc-detail-right {
+  min-width: 0;
+}
+
+.dc-care-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid #e7e5e4;
+}
+
+.dc-care-facts > div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0eeeb;
+}
+
+.dc-care-facts dt {
+  color: #78716c;
+  font-size: 11.5px;
+}
+
+.dc-care-facts dd {
+  margin: 0;
+  color: #44403c;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.dc-care-note {
+  margin: 0;
+  padding: 10px 11px;
+  border-radius: 7px;
+  background: #f8f7f5;
+  color: #57534e;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.dc-care-empty-copy {
+  margin: 0;
+  color: #78716c;
+  font-size: 12.5px;
+}
+
+.dc-care-history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dc-care-history-head h2,
+.dc-care-history-head p {
+  margin: 0;
+}
+
+.dc-care-history-head p {
+  margin-top: 3px;
+  color: #78716c;
+  font-size: 12px;
+}
+
+.dc-care-history-head > span {
+  color: #78716c;
+  font-size: 12px;
+}
+
+.dc-care-history {
+  border-top: 1px solid #d6d3d1;
+}
+
+.dc-care-history-row {
+  display: grid;
+  grid-template-columns: 98px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 68px;
+  padding: 11px 2px;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.dc-care-history-row time {
+  color: #57534e;
+  font-size: 12px;
+}
+
+.dc-care-history-row > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dc-care-history-row strong,
+.dc-care-history-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-care-history-row strong {
+  color: #44403c;
+  font-size: 13.5px;
+}
+
+.dc-care-history-row span {
+  color: #78716c;
+  font-size: 12px;
+}
+
+.dc-care-history-row em {
+  padding: 2px 7px;
+  border: 1px solid #e7e5e4;
+  border-radius: 5px;
+  color: #57534e;
+  font-size: 10.5px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.dc-care-history-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 22px 2px;
+  border-top: 1px solid #d6d3d1;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.dc-care-history-empty strong {
+  color: #44403c;
+  font-size: 13.5px;
+}
+
+.dc-care-history-empty span {
+  color: #78716c;
+  font-size: 12.5px;
+}
+
+/* 사후기록 — AI 초안 저장과 사람 승인·Profile 반영을 분리한다. */
+.dc-post-head {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dc-post-list-note {
+  margin: -5px 0 0;
+  color: #78716c;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.dc-post-row {
+  width: 100%;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  padding: 12px 13px 12px 18px;
+  border: 0;
+  border-bottom: 1px solid #f0eeeb;
+  background: #fff;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dc-post-row:hover {
+  background: #fcfbf9;
+}
+
+.dc-post-row.is-selected {
+  background: #fff7ed;
+  box-shadow: inset 3px 0 #f97316;
+}
+
+.dc-post-row:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: -2px;
+}
+
+.dc-post-row-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dc-post-row-main strong,
+.dc-post-row-main span,
+.dc-post-row-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-post-row-main strong {
+  color: #1f1d1a;
+  font-size: 13.5px;
+}
+
+.dc-post-row-main span {
+  color: #57534e;
+  font-size: 11.5px;
+}
+
+.dc-post-row-main small {
+  color: #a8a29e;
+  font-size: 10.5px;
+}
+
+.dc-post-row-side {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #a8a29e;
+}
+
+.dc-post-row-side em,
+.dc-post-status {
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dc-post-row-side em.is-pending,
+.dc-post-status.is-pending {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.dc-post-row-side em.is-approved,
+.dc-post-status.is-approved {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.dc-post-row-side em.is-rejected,
+.dc-post-status.is-rejected {
+  background: #f5f4f1;
+  color: #57534e;
+}
+
+.dc-post-row-side em.is-unknown,
+.dc-post-status.is-unknown {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.dc-post-status {
+  margin-left: auto;
+}
+
+.dc-post-principle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 36px 14px;
+  padding: 10px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #9a3412;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.dc-post-principle strong {
+  flex: none;
+}
+
+.dc-post-principle.is-approved {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.dc-post-principle.is-rejected {
+  border-color: #d6d3d1;
+  background: #fafaf9;
+  color: #57534e;
+}
+
+.dc-post-detail-body {
+  gap: 24px;
+}
+
+.dc-post-detail-body .dc-detail-right {
+  min-width: 0;
+}
+
+.dc-post-memo {
+  margin: 0;
+  padding: 13px 14px;
+  border-left: 3px solid #d6d3d1;
+  background: #fafaf9;
+  color: #44403c;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.dc-post-audit {
+  border-top: 1px solid #e7e5e4;
+}
+
+.dc-post-audit > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 9px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f0eeeb;
+}
+
+.dc-post-audit strong {
+  color: #44403c;
+  font-size: 12px;
+}
+
+.dc-post-audit span,
+.dc-post-audit time {
+  color: #78716c;
+  font-size: 11px;
+}
+
+.dc-post-audit time {
+  grid-column: 2;
+}
+
+.dc-post-draft-head h2,
+.dc-post-draft-head p {
+  margin: 0;
+}
+
+.dc-post-draft-head p {
+  margin-top: 3px;
+  color: #78716c;
+  font-size: 12px;
+}
+
+.dc-post-draft {
+  border-top: 1px solid #d6d3d1;
+}
+
+.dc-post-draft-row {
+  display: grid;
+  grid-template-columns: 142px minmax(0, 1fr);
+  gap: 4px 16px;
+  padding: 11px 2px;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.dc-post-draft-row.is-profile {
+  margin-top: 7px;
+  padding: 13px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+.dc-post-draft-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: #57534e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dc-post-draft-label em {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.dc-post-draft-row p {
+  margin: 0;
+  color: #44403c;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.dc-post-draft-row small {
+  grid-column: 2;
+  color: #9a3412;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dc-post-actionbar {
+  min-height: 68px;
+}
+
+.dc-post-actionbar .dc-actionbar-note {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+}
+
+.dc-post-action-message {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #57534e;
+  font-size: 12.5px;
+}
+
+.dc-post-action-message small {
+  color: #92400e;
+  font-size: 11px;
+}
+
+.dc-post-action-message .is-success {
+  color: #047857;
+  font-weight: 600;
+}
+
+.dc-post-action-message .is-error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.dc-post-actionbar .dc-btn-ghost:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+/* U9 — 저장 접수 처리 이력 · server gate 기반 최종 확정 shell */
+.dc-intake-review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dc-intake-review-head h2 {
+  margin: 0;
+}
+
+.dc-intake-review-head > span {
+  color: #a8a29e;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.dc-intake-review-state {
+  margin: 0;
+  padding: 10px 11px;
+  border-radius: 8px;
+  background: #faf9f7;
+  color: #78716c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dc-intake-review-state.is-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  border: 1px solid #e7e5e4;
+  background: #fff;
+  color: #57534e;
+}
+
+.dc-intake-review-state button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #c2410c;
+  font: inherit;
+  font-weight: 600;
+}
+
+.dc-intake-audit-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e7e5e4;
+}
+
+.dc-intake-audit-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 0 10px 9px;
+  border-bottom: 1px solid #f0eeeb;
+  border-left: 2px solid #d6d3d1;
+}
+
+.dc-intake-audit-entry.is-warning {
+  border-left-color: #d97706;
+  background: #fffdf5;
+}
+
+.dc-intake-audit-entry > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dc-intake-audit-entry strong {
+  color: #44403c;
+  font-size: 12px;
+}
+
+.dc-intake-audit-entry.is-warning strong {
+  color: #92400e;
+}
+
+.dc-intake-audit-entry span,
+.dc-intake-audit-entry time,
+.dc-intake-audit-entry p {
+  margin: 0;
+  color: #78716c;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dc-finalization {
+  padding-top: 2px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dc-final-gate-note,
+.dc-final-write-note {
+  margin: 0;
+  color: #78716c;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.dc-final-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dc-final-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dc-final-action.is-warning {
+  border-color: #fde68a;
+  background: #fffdf5;
+}
+
+.dc-final-action > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dc-final-action strong {
+  color: #44403c;
+  font-size: 12.5px;
+}
+
+.dc-final-action.is-warning strong {
+  color: #92400e;
+}
+
+.dc-final-action span {
+  color: #78716c;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dc-final-action button {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+.dc-btn-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-family: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dc-btn-warning:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dc-final-blockers {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 11px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffdf5;
+}
+
+.dc-final-blockers > strong {
+  color: #92400e;
+  font-size: 11.5px;
+}
+
+.dc-final-blockers > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(217, 119, 6, 0.16);
+}
+
+.dc-final-blockers span {
+  color: #78350f;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.dc-final-blockers p,
+.dc-final-blockers small {
+  margin: 0;
+  color: #92400e;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dc-final-hard-block,
+.dc-final-complete {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px;
+  border-radius: 8px;
+}
+
+.dc-final-hard-block {
+  border: 1px solid #fecaca;
+  background: #fffafa;
+  color: #991b1b;
+}
+
+.dc-final-complete {
+  border: 1px solid #bbf7d0;
+  background: #f6fff8;
+  color: #166534;
+}
+
+.dc-final-hard-block strong,
+.dc-final-complete strong {
+  font-size: 12.5px;
+}
+
+.dc-final-hard-block span,
+.dc-final-complete span {
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 /* 로딩 · placeholder */

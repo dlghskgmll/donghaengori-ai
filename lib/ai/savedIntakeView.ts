@@ -22,6 +22,8 @@ export const SavedIntakeSummarySchema = z.object({
   channel: z.string().nullable(),
   status: z.string().nullable(),
   createdAt: z.string().nullable(),
+  appointmentDate: z.string().nullable(),
+  confirmed: z.boolean(),
   urgent: z.boolean(),
   urgentConfidence: z.boolean().nullable(),
   needsConfirmation: z.boolean(),
@@ -36,6 +38,23 @@ export interface SavedIntakeField {
   status: EvidenceStatus;
   evidence: string[];
   spoken?: string | null;
+}
+
+export interface SavedIntakeGateBlocker {
+  field: string;
+  label: string;
+  value: string | null;
+  spoken: string | null;
+  evidence: string[];
+  question: string | null;
+  heard: Array<{ label: string; value: string }>;
+}
+
+export interface SavedIntakeGate {
+  allowed: boolean;
+  acknowledged: boolean;
+  hardBlock: boolean;
+  blockers: SavedIntakeGateBlocker[];
 }
 
 export interface SavedIntakeDetailView {
@@ -53,6 +72,9 @@ export interface SavedIntakeDetailView {
   confirmQuestions: string[];
   notes: string[];
   hospitalDowngraded: boolean;
+  confirmed: boolean;
+  /** Team GET detail이 실제로 준 server gate. 없으면 UI가 추측하지 않는다. */
+  gate: SavedIntakeGate | null;
 }
 
 const URGENT_STATUSES = new Set(["긴급", "긴급 처리됨"]);
@@ -81,6 +103,8 @@ export function toSavedIntakeSummary(row: TeamIntakeRow): SavedIntakeSummary {
     channel: row.channel?.trim() || null,
     status: row.status?.trim() || null,
     createdAt: row.created_at?.trim() || null,
+    appointmentDate: row.date_value?.trim() || null,
+    confirmed: row.confirmed === 1 || row.status?.trim() === "확정",
     urgent,
     // 값이 저장되지 않은 기존 row를 confident로 추정하지 않는다.
     urgentConfidence: urgent ? (row.urgent_confident ?? null) : null,
@@ -185,5 +209,23 @@ export function toSavedIntakeDetail(
     confirmQuestions: card?.confirm_questions ?? [],
     notes,
     hospitalDowngraded: hospital.downgraded,
+    confirmed:
+      detail.confirmed === 1 || detail.status?.trim() === "확정",
+    gate: detail.gate
+      ? {
+          allowed: detail.gate.allowed,
+          acknowledged: detail.gate.acknowledged,
+          hardBlock: detail.gate.hard_block,
+          blockers: detail.gate.blockers.map((blocker) => ({
+            field: blocker.field,
+            label: blocker.label,
+            value: blocker.value ?? null,
+            spoken: blocker.spoken ?? null,
+            evidence: blocker.evidence,
+            question: blocker.question ?? null,
+            heard: blocker.heard,
+          })),
+        }
+      : null,
   };
 }

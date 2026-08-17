@@ -1,6 +1,9 @@
 import { IntakeProviderError } from "@/lib/ai/errors";
 import { toSavedIntakeDetail } from "@/lib/ai/savedIntakeView";
-import { fetchTeamIntakeDetail } from "@/lib/ai/teamIntakeRead";
+import {
+  fetchTeamIntakeDetail,
+  TeamIntakeReadError,
+} from "@/lib/ai/teamIntakeRead";
 
 // 저장된 접수 상세 read-only proxy.
 // id는 양의 정수만 허용한다 — 임의 경로가 backend URL에 붙지 않게 한다.
@@ -13,7 +16,7 @@ function errorResponse(status: number, message: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -23,12 +26,23 @@ export async function GET(
   }
 
   try {
-    const detail = await fetchTeamIntakeDetail(Number(id));
+    const detail = await fetchTeamIntakeDetail(Number(id), {
+      authorization: request.headers.get("authorization"),
+    });
     return Response.json(toSavedIntakeDetail(detail), {
       status: 200,
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
+    // 401(로그인)·403(권한)·404(없는 접수)를 서로 다른 상태로 보존한다.
+    // 502는 아래의 이 경로 전용 문구를 쓴다.
+    if (error instanceof TeamIntakeReadError && error.status !== 502) {
+      console.error("saved intake detail failed", {
+        intake_id: id,
+        code: error.code,
+      });
+      return errorResponse(error.status, error.message);
+    }
     const code =
       error instanceof IntakeProviderError ? error.code : "TEAM_READ_UNKNOWN";
     console.error("saved intake detail failed", { intake_id: id, code });

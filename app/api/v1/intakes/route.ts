@@ -1,6 +1,9 @@
 import { IntakeProviderError } from "@/lib/ai/errors";
 import { toSavedIntakeSummary } from "@/lib/ai/savedIntakeView";
-import { fetchTeamIntakes } from "@/lib/ai/teamIntakeRead";
+import {
+  fetchTeamIntakes,
+  TeamIntakeReadError,
+} from "@/lib/ai/teamIntakeRead";
 
 // 저장된 접수 목록 read-only proxy.
 // 브라우저는 TEAM_AI_BASE_URL을 알 필요가 없다 — 서버에서만 읽는다.
@@ -34,13 +37,21 @@ export async function GET(request: Request) {
   }
 
   try {
-    const rows = await fetchTeamIntakes(parsed);
+    const rows = await fetchTeamIntakes(parsed, {
+      authorization: request.headers.get("authorization"),
+    });
     lastFailureCode = null;
     return Response.json(
       { intakes: rows.map(toSavedIntakeSummary) },
       { status: 200, headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
+    // 401·403은 "backend 꺼짐"과 다른 상태다. 502로 뭉개지 않는다.
+    // 502는 이 경로의 문구를 그대로 쓴다(목록/상세를 구분해 안내한다).
+    if (error instanceof TeamIntakeReadError && error.status !== 502) {
+      logFailureOnce(error.code);
+      return errorResponse(error.status, error.message);
+    }
     const code =
       error instanceof IntakeProviderError ? error.code : "TEAM_READ_UNKNOWN";
     logFailureOnce(code);

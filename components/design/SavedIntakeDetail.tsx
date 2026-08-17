@@ -12,6 +12,11 @@ import {
   ResolvableFieldRow,
   type ResolvableField,
 } from "./ResolvableFieldRow";
+import type { IntakeAuditState } from "@/lib/ui/intakeFinalization";
+import {
+  SavedIntakeAuditSection,
+  SavedIntakeFinalization,
+} from "./SavedIntakeReviewShell";
 import { UrgentIntakeDetail } from "./UrgentIntakeDetail";
 
 interface SavedIntakeDetailProps {
@@ -22,11 +27,14 @@ interface SavedIntakeDetailProps {
   requestId: string;
   resolutions: IntakeFieldResolutionState;
   onResolutionAction: (action: IntakeFieldResolutionAction) => void;
+  auditState: IntakeAuditState;
+  onAuditRetry?: () => void;
 }
 
 function toResolvableField(
   field: SavedIntakeField,
   questions: string[],
+  editable: boolean,
 ): ResolvableField {
   return {
     key: field.key,
@@ -35,7 +43,7 @@ function toResolvableField(
     status: field.status,
     evidence: field.evidence,
     sub: field.spoken ? `어르신 표현: ‘${field.spoken}’` : undefined,
-    editable: true,
+    editable,
     confirmationQuestion: findFieldConfirmationQuestion(field.key, questions),
   };
 }
@@ -48,6 +56,8 @@ export function SavedIntakeDetail({
   requestId,
   resolutions,
   onResolutionAction,
+  auditState,
+  onAuditRetry,
 }: SavedIntakeDetailProps) {
   if (isLoading) {
     return (
@@ -87,7 +97,7 @@ export function SavedIntakeDetail({
   }
 
   const fields = detail.fields.map((field) =>
-    toResolvableField(field, detail.confirmQuestions),
+    toResolvableField(field, detail.confirmQuestions, !detail.confirmed),
   );
   const attachedQuestions = new Set(
     fields
@@ -164,6 +174,13 @@ export function SavedIntakeDetail({
               <span className="dc-needs-text">{needs}</span>
             </div>
           ) : null}
+
+          <SavedIntakeAuditSection state={auditState} onRetry={onAuditRetry} />
+
+          <SavedIntakeFinalization
+            confirmed={detail.confirmed}
+            gate={detail.gate}
+          />
         </div>
 
         <div className="dc-divider" aria-hidden="true" />
@@ -237,12 +254,9 @@ export function SavedIntakeDetail({
 
       <div className="dc-actionbar">
         <span className="dc-actionbar-note">
-          AI는 후보와 근거까지만 제시합니다. 최종 확정은 담당자가 합니다.
+          최종 확정 가능 여부는 local 작업값이 아니라 server gate가 결정합니다.
         </span>
         <span className="dc-actionbar-provider">저장된 접수 · #{detail.id}</span>
-        <button type="button" className="dc-btn-primary" disabled>
-          접수카드 확정
-        </button>
       </div>
     </main>
   );

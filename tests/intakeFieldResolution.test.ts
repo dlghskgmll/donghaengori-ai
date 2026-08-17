@@ -95,6 +95,8 @@ function summary(id: number): SavedIntakeSummary {
     channel: "전화",
     status: "접수 대기",
     createdAt: "2026-08-17 09:00",
+    appointmentDate: "2026-08-18",
+    confirmed: false,
     urgent: false,
     urgentConfidence: null,
     needsConfirmation: true,
