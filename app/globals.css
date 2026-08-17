@@ -1596,7 +1596,7 @@ button:disabled {
 }
 
 .dc-nav-user-action:focus-visible {
-  outline: 2px solid #f97316;
+  outline: 2px solid #f94704;
   outline-offset: 2px;
 }
 
@@ -1667,7 +1667,7 @@ button:disabled {
 
 .dc-new-intake:hover,
 .dc-new-intake.is-active {
-  border-color: #f97316;
+  border-color: #f94704;
   color: #c2410c;
   background: #fff7ed;
 }
@@ -1728,7 +1728,7 @@ button:disabled {
 
 .dc-row.is-selected {
   background: #faf9f7;
-  border-left-color: #f97316;
+  border-left-color: #f94704;
 }
 
 .dc-row-top {
@@ -1749,7 +1749,7 @@ button:disabled {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #f97316;
+  background: #f94704;
   flex: none;
 }
 
@@ -2267,7 +2267,7 @@ button:disabled {
 }
 
 .dc-field-action.is-primary:hover:not(:disabled) {
-  border-color: #f97316;
+  border-color: #f94704;
   background: #fff7ed;
 }
 
@@ -2303,7 +2303,7 @@ button:disabled {
 }
 
 .dc-field-input:focus {
-  border-color: #f97316;
+  border-color: #f94704;
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
 }
 
@@ -2344,7 +2344,7 @@ button:disabled {
 
 .dc-field-candidate input {
   margin: 3px 0 0;
-  accent-color: #f97316;
+  accent-color: #f94704;
 }
 
 .dc-field-candidate > span {
@@ -2393,8 +2393,10 @@ button:disabled {
   padding: 0 20px;
   border-radius: 8px;
   border: none;
-  background: #f97316;
-  color: #fff;
+  background: #f94704;
+  /* 브랜드 오렌지 위에서는 흰 글자가 3.54:1로 WCAG AA(4.5:1)에 못 미친다.
+     본문·제목에 쓰는 ink를 그대로 얹어 4.75:1을 확보한다. 배경색은 그대로 둔다. */
+  color: #1f1d1a;
   font-size: 14.5px;
   font-weight: 600;
   font-family: inherit;
@@ -2407,7 +2409,11 @@ button:disabled {
 }
 
 .dc-btn-primary:hover:not(:disabled) {
-  background: #ea580c;
+  /* hover 전용 보조색. 공식 브랜드 primary는 #f94704 하나다.
+     라벨 #1f1d1a와 4.5:1을 지켜야 하므로 휘도는 거의 유지하고 채도만 낮춘다 —
+     그래서 눈에는 또렷하게 바뀌는데도 대비가 깨지지 않는다. 더 어둡게 하면
+     (예: #d43c03) hover에서 AA를 못 지킨다. */
+  background: #e75413;
 }
 
 .dc-btn-primary:disabled {
@@ -2430,7 +2436,7 @@ button:disabled {
 }
 
 .dc-btn-ghost:hover {
-  border-color: #f97316;
+  border-color: #f94704;
   color: #c2410c;
 }
 
@@ -2499,7 +2505,7 @@ button:disabled {
 
 .dc-input:focus,
 .dc-textarea:focus {
-  border-color: #f97316;
+  border-color: #f94704;
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
 }
 
@@ -2538,7 +2544,7 @@ button:disabled {
 }
 
 .dc-scenario:hover {
-  border-color: #f97316;
+  border-color: #f94704;
   background: #fff7ed;
 }
 
@@ -2703,7 +2709,7 @@ button:disabled {
 }
 
 .dc-home-request:focus-visible {
-  outline: 2px solid #f97316;
+  outline: 2px solid #f94704;
   outline-offset: 2px;
 }
 
@@ -2855,7 +2861,7 @@ button:disabled {
 }
 
 .dc-schedule-row:focus-visible {
-  outline: 2px solid #f97316;
+  outline: 2px solid #f94704;
   outline-offset: 2px;
 }
 
@@ -3009,7 +3015,7 @@ button:disabled {
 .dc-profile-login input:focus,
 .dc-elder-search input:focus {
   outline: 2px solid rgba(249, 115, 22, 0.22);
-  border-color: #f97316;
+  border-color: #f94704;
 }
 
 .dc-profile-login .dc-profile-login-error {
@@ -3165,12 +3171,12 @@ button:disabled {
 
 .dc-elder-row.is-selected {
   background: #fff7ed;
-  box-shadow: inset 3px 0 #f97316;
+  box-shadow: inset 3px 0 #f94704;
 }
 
 .dc-elder-row:focus-visible,
 .dc-icon-button:focus-visible {
-  outline: 2px solid #f97316;
+  outline: 2px solid #f94704;
   outline-offset: -2px;
 }
 
@@ -3421,11 +3427,11 @@ button:disabled {
 
 .dc-post-row.is-selected {
   background: #fff7ed;
-  box-shadow: inset 3px 0 #f97316;
+  box-shadow: inset 3px 0 #f94704;
 }
 
 .dc-post-row:focus-visible {
-  outline: 2px solid #f97316;
+  outline: 2px solid #f94704;
   outline-offset: -2px;
 }
 
@@ -4005,7 +4011,7 @@ button:disabled {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #f97316;
+  background: #f94704;
   flex: none;
 }
 
