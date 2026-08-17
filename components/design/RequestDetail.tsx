@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import type { IntakeAnalysis, IntakeResponseMeta } from "@/lib/ai/schema";
+import {
+  getIntakeFieldDraft,
+  isHumanResolved,
+  type IntakeFieldResolutionAction,
+  type IntakeFieldResolutionState,
+} from "@/lib/ui/intakeFieldResolution";
 import {
   buildDesignGroups,
   summarizeNeeds,
-  type DesignField,
 } from "./analysisFields";
+import { ResolvableFieldRow } from "./ResolvableFieldRow";
 
 interface RequestDetailProps {
   analysis: IntakeAnalysis;
@@ -15,66 +20,9 @@ interface RequestDetailProps {
   channelLabel: string;
   receivedLabel: string;
   onReanalyze: () => void;
-}
-
-function FieldRow({ field }: { field: DesignField }) {
-  const [evOpen, setEvOpen] = useState(false);
-  const inferred = field.status === "INFERRED";
-  const needs = field.status === "NEEDS_CONFIRMATION";
-  const hasEvidence = field.evidence.length > 0;
-
-  return (
-    <div className="dc-field">
-      <span className="dc-field-label">{field.label}</span>
-      <span className="dc-field-body">
-        <span className="dc-field-value-row">
-          <span
-            className={`dc-field-value${needs ? " is-missing" : ""}`}
-          >
-            {field.display}
-          </span>
-
-          {/* 추정은 badge를 크게 두지 않고 값 옆 텍스트 + 근거 펼치기로 표현한다. */}
-          {inferred ? (
-            <>
-              <span className="dc-inferred-mark">· 추정</span>
-              {hasEvidence ? (
-                <button
-                  type="button"
-                  className="dc-ev-toggle"
-                  aria-expanded={evOpen}
-                  onClick={() => setEvOpen((open) => !open)}
-                >
-                  {evOpen ? "근거 접기" : "근거 보기"}
-                </button>
-              ) : null}
-            </>
-          ) : null}
-
-          {needs ? <span className="dc-need-badge">확인 필요</span> : null}
-        </span>
-
-        {field.sub ? <span className="dc-field-sub">{field.sub}</span> : null}
-
-        {inferred && evOpen ? (
-          <span className="dc-evidence">
-            {field.evidence.map((item, index) => (
-              <span key={`${field.key}-ev-${index}`}>{item}</span>
-            ))}
-          </span>
-        ) : null}
-
-        {/* 확인 필요 항목은 근거를 접지 않고 바로 보여준다 — 담당자가 물어볼 내용이다. */}
-        {needs && hasEvidence ? (
-          <span className="dc-evidence">
-            {field.evidence.map((item, index) => (
-              <span key={`${field.key}-need-${index}`}>{item}</span>
-            ))}
-          </span>
-        ) : null}
-      </span>
-    </div>
-  );
+  requestId: string;
+  resolutions: IntakeFieldResolutionState;
+  onResolutionAction: (action: IntakeFieldResolutionAction) => void;
 }
 
 export function RequestDetail({
@@ -84,9 +32,24 @@ export function RequestDetail({
   channelLabel,
   receivedLabel,
   onReanalyze,
+  requestId,
+  resolutions,
+  onResolutionAction,
 }: RequestDetailProps) {
   const groups = buildDesignGroups(analysis);
-  const needs = summarizeNeeds(groups);
+  const needs = summarizeNeeds(groups, (field) =>
+    isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
+  );
+  const attachedQuestions = new Set(
+    groups
+      .flatMap((group) => group.fields)
+      .filter((field) => field.status === "NEEDS_CONFIRMATION")
+      .map((field) => field.confirmationQuestion)
+      .filter((question): question is string => Boolean(question)),
+  );
+  const remainingQuestions = analysis.confirmation_questions.filter(
+    (question) => !attachedQuestions.has(question),
+  );
   const person = analysis.caller.person_candidates[0] ?? null;
   const providerLabel = meta?.fallback_used
     ? "기본 분석"
@@ -129,11 +92,11 @@ export function RequestDetail({
             </div>
           </div>
 
-          {analysis.confirmation_questions.length > 0 ? (
+          {remainingQuestions.length > 0 ? (
             <div className="dc-block">
               <span className="dc-block-title">확인 과정</span>
               <div className="dc-checks">
-                {analysis.confirmation_questions.map((question, index) => (
+                {remainingQuestions.map((question, index) => (
                   <div className="dc-check" key={`q-${index}`}>
                     <span className="dc-check-who">담당자 확인 질문</span>
                     <span className="dc-check-text">{question}</span>
@@ -158,7 +121,17 @@ export function RequestDetail({
             <div className="dc-group" key={group.name}>
               <span className="dc-group-name">{group.name}</span>
               {group.fields.map((field) => (
-                <FieldRow field={field} key={field.key} />
+                <ResolvableFieldRow
+                  requestId={requestId}
+                  field={field}
+                  draft={getIntakeFieldDraft(
+                    resolutions,
+                    requestId,
+                    field.key,
+                  )}
+                  onAction={onResolutionAction}
+                  key={`${requestId}-${field.key}`}
+                />
               ))}
             </div>
           ))}

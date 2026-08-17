@@ -27,6 +27,10 @@ import {
   SavedIntakePoller,
   type SavedIntakePollUpdate,
 } from "@/lib/ui/savedIntakePolling";
+import {
+  initialIntakeFieldResolutionState,
+  intakeFieldResolutionReducer,
+} from "@/lib/ui/intakeFieldResolution";
 import { AppShell, type ShellTab } from "./design/AppShell";
 import { IntakeComposer, type IntakeComposerValues } from "./design/IntakeComposer";
 import { PlaceholderTab } from "./design/PlaceholderTab";
@@ -120,6 +124,12 @@ export function IntakeWorkspace() {
   const [inbox, dispatch] = useReducer(
     requestInboxReducer,
     initialRequestInboxState,
+  );
+  // 사람의 작업값은 AI 원본 및 polling 목록과 분리한다. 새 목록이 도착해도
+  // 현재 입력 중인 값과 사람의 선택은 이 reducer에 그대로 남는다.
+  const [fieldResolutions, resolveField] = useReducer(
+    intakeFieldResolutionReducer,
+    initialIntakeFieldResolutionState,
   );
   const { saved, previews, selectedId, listLoading, listError, connectionLost } =
     inbox;
@@ -305,6 +315,9 @@ export function IntakeWorkspace() {
             detail={detail ?? ({} as SavedIntakeDetailView)}
             isLoading={detailLoading}
             error={detailError}
+            requestId={selectedId}
+            resolutions={fieldResolutions}
+            onResolutionAction={resolveField}
             onRetry={() =>
               void loadDetail(Number(selectedId.slice("saved-".length)))
             }
@@ -322,6 +335,9 @@ export function IntakeWorkspace() {
           meta={selectedPreview.meta}
           channelLabel="미리보기 · 저장되지 않음"
           receivedLabel={`${timeLabel(selectedPreview.receivedAt)} 분석`}
+          requestId={selectedPreview.id}
+          resolutions={fieldResolutions}
+          onResolutionAction={resolveField}
           onReanalyze={() => {
             setComposerSeed({
               caller_phone: selectedPreview.callerPhone,

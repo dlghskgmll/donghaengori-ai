@@ -1,61 +1,42 @@
 "use client";
 
-import { useState } from "react";
 import type { SavedIntakeDetailView, SavedIntakeField } from "@/lib/ai/savedIntakeView";
+import {
+  findFieldConfirmationQuestion,
+  getIntakeFieldDraft,
+  isHumanResolved,
+  type IntakeFieldResolutionAction,
+  type IntakeFieldResolutionState,
+} from "@/lib/ui/intakeFieldResolution";
+import {
+  ResolvableFieldRow,
+  type ResolvableField,
+} from "./ResolvableFieldRow";
 
 interface SavedIntakeDetailProps {
   detail: SavedIntakeDetailView;
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
+  requestId: string;
+  resolutions: IntakeFieldResolutionState;
+  onResolutionAction: (action: IntakeFieldResolutionAction) => void;
 }
 
-function FieldRow({ field }: { field: SavedIntakeField }) {
-  const [evOpen, setEvOpen] = useState(false);
-  const inferred = field.status === "INFERRED";
-  const needs = field.status === "NEEDS_CONFIRMATION";
-  const hasEvidence = field.evidence.length > 0;
-
-  return (
-    <div className="dc-field">
-      <span className="dc-field-label">{field.label}</span>
-      <span className="dc-field-body">
-        <span className="dc-field-value-row">
-          <span className={`dc-field-value${needs ? " is-missing" : ""}`}>
-            {field.value ?? "확인 필요"}
-          </span>
-          {inferred ? (
-            <>
-              <span className="dc-inferred-mark">· 추정</span>
-              {hasEvidence ? (
-                <button
-                  type="button"
-                  className="dc-ev-toggle"
-                  aria-expanded={evOpen}
-                  onClick={() => setEvOpen((open) => !open)}
-                >
-                  {evOpen ? "근거 접기" : "근거 보기"}
-                </button>
-              ) : null}
-            </>
-          ) : null}
-          {needs ? <span className="dc-need-badge">확인 필요</span> : null}
-        </span>
-
-        {field.spoken ? (
-          <span className="dc-field-sub">어르신 표현: ‘{field.spoken}’</span>
-        ) : null}
-
-        {hasEvidence && (needs || evOpen) ? (
-          <span className="dc-evidence">
-            {field.evidence.map((item, index) => (
-              <span key={`${field.key}-ev-${index}`}>{item}</span>
-            ))}
-          </span>
-        ) : null}
-      </span>
-    </div>
-  );
+function toResolvableField(
+  field: SavedIntakeField,
+  questions: string[],
+): ResolvableField {
+  return {
+    key: field.key,
+    label: field.label,
+    display: field.value ?? "확인 필요",
+    status: field.status,
+    evidence: field.evidence,
+    sub: field.spoken ? `어르신 표현: ‘${field.spoken}’` : undefined,
+    editable: true,
+    confirmationQuestion: findFieldConfirmationQuestion(field.key, questions),
+  };
 }
 
 export function SavedIntakeDetail({
@@ -63,6 +44,9 @@ export function SavedIntakeDetail({
   isLoading,
   error,
   onRetry,
+  requestId,
+  resolutions,
+  onResolutionAction,
 }: SavedIntakeDetailProps) {
   if (isLoading) {
     return (
@@ -87,6 +71,32 @@ export function SavedIntakeDetail({
       </main>
     );
   }
+
+  const fields = detail.fields.map((field) =>
+    toResolvableField(field, detail.confirmQuestions),
+  );
+  const attachedQuestions = new Set(
+    fields
+      .filter((field) => field.status === "NEEDS_CONFIRMATION")
+      .map((field) => field.confirmationQuestion)
+      .filter((question): question is string => Boolean(question)),
+  );
+  const remainingQuestions = detail.confirmQuestions.filter(
+    (question) => !attachedQuestions.has(question),
+  );
+  const pendingLabels = fields
+    .filter(
+      (field) =>
+        field.status === "NEEDS_CONFIRMATION" &&
+        !isHumanResolved(
+          getIntakeFieldDraft(resolutions, requestId, field.key),
+        ),
+    )
+    .map((field) => field.label);
+  const needs =
+    pendingLabels.length > 0
+      ? `${pendingLabels.join(" · ")} 확인이 필요합니다`
+      : null;
 
   return (
     <main className="dc-detail">
@@ -129,17 +139,24 @@ export function SavedIntakeDetail({
             </div>
           </div>
 
-          {detail.confirmQuestions.length > 0 ? (
+          {remainingQuestions.length > 0 ? (
             <div className="dc-block">
               <span className="dc-block-title">확인 과정</span>
               <div className="dc-checks">
-                {detail.confirmQuestions.map((question, index) => (
+                {remainingQuestions.map((question, index) => (
                   <div className="dc-check" key={`q-${index}`}>
                     <span className="dc-check-who">담당자 확인 질문</span>
                     <span className="dc-check-text">{question}</span>
                   </div>
                 ))}
               </div>
+            </div>
+          ) : null}
+
+          {needs ? (
+            <div className="dc-needs">
+              <span className="dc-needs-label">남은 확인</span>
+              <span className="dc-needs-text">{needs}</span>
             </div>
           ) : null}
         </div>
@@ -149,10 +166,20 @@ export function SavedIntakeDetail({
         <div className="dc-detail-right">
           <div className="dc-group">
             <span className="dc-group-name">동행 정보</span>
-            {detail.fields
+            {fields
               .filter((field) => field.key !== "target")
               .map((field) => (
-                <FieldRow field={field} key={field.key} />
+                <ResolvableFieldRow
+                  requestId={requestId}
+                  field={field}
+                  draft={getIntakeFieldDraft(
+                    resolutions,
+                    requestId,
+                    field.key,
+                  )}
+                  onAction={onResolutionAction}
+                  key={`${requestId}-${field.key}`}
+                />
               ))}
           </div>
 
@@ -168,10 +195,20 @@ export function SavedIntakeDetail({
                 </span>
               </div>
             ) : null}
-            {detail.fields
+            {fields
               .filter((field) => field.key === "target")
               .map((field) => (
-                <FieldRow field={field} key={field.key} />
+                <ResolvableFieldRow
+                  requestId={requestId}
+                  field={field}
+                  draft={getIntakeFieldDraft(
+                    resolutions,
+                    requestId,
+                    field.key,
+                  )}
+                  onAction={onResolutionAction}
+                  key={`${requestId}-${field.key}`}
+                />
               ))}
           </div>
 
