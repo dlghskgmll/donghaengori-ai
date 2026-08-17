@@ -11,6 +11,7 @@ export interface RequestRow {
   badgeTone?: "warn" | "danger" | "neutral";
   statusText?: string | null;
   alert?: string | null;
+  alertTone?: "warn" | "danger";
   unread?: boolean;
 }
 
@@ -144,7 +145,13 @@ export function RequestList({
               </span>
               <span className="dc-row-line2">{row.line2}</span>
               {row.alert ? (
-                <span className="dc-row-alert">{row.alert}</span>
+                <span
+                  className={`dc-row-alert${
+                    row.alertTone ? ` is-${row.alertTone}` : ""
+                  }`}
+                >
+                  {row.alert}
+                </span>
               ) : null}
               <span className="dc-row-meta">{row.meta}</span>
             </button>

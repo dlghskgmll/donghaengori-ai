@@ -23,6 +23,7 @@ export const SavedIntakeSummarySchema = z.object({
   status: z.string().nullable(),
   createdAt: z.string().nullable(),
   urgent: z.boolean(),
+  urgentConfidence: z.boolean().nullable(),
   needsConfirmation: z.boolean(),
 });
 
@@ -47,6 +48,7 @@ export interface SavedIntakeDetailView {
   summary: string | null;
   intent: string | null;
   urgent: boolean;
+  urgentConfidence: boolean | null;
   fields: SavedIntakeField[];
   confirmQuestions: string[];
   notes: string[];
@@ -62,6 +64,7 @@ function isUrgent(row: { status?: string | null; intent?: string | null }) {
 }
 
 export function toSavedIntakeSummary(row: TeamIntakeRow): SavedIntakeSummary {
+  const urgent = isUrgent(row);
   const hospitalStatus = normalizeSavedHospitalStatus({
     hospital: row.hospital,
     teamStatus: row.hospital_status,
@@ -78,11 +81,13 @@ export function toSavedIntakeSummary(row: TeamIntakeRow): SavedIntakeSummary {
     channel: row.channel?.trim() || null,
     status: row.status?.trim() || null,
     createdAt: row.created_at?.trim() || null,
-    urgent: isUrgent(row),
+    urgent,
+    // 값이 저장되지 않은 기존 row를 confident로 추정하지 않는다.
+    urgentConfidence: urgent ? (row.urgent_confident ?? null) : null,
     needsConfirmation:
       hospitalStatus !== "CONFIRMED_BY_INPUT" ||
       !row.date_value ||
-      isUrgent(row),
+      urgent,
   };
 }
 
@@ -97,6 +102,7 @@ const FIELD_ORDER: Array<{ key: string; label: string }> = [
 export function toSavedIntakeDetail(
   detail: TeamIntakeDetail,
 ): SavedIntakeDetailView {
+  const urgent = isUrgent(detail);
   const card = detail.card ?? null;
   const utterance = (card?.raw_utterance ?? detail.raw_utterance ?? "").trim();
 
@@ -173,7 +179,8 @@ export function toSavedIntakeDetail(
     utterance,
     summary: card?.summary?.trim() || null,
     intent: card?.intent ?? detail.intent ?? null,
-    urgent: isUrgent(detail),
+    urgent,
+    urgentConfidence: urgent ? (detail.urgent_confident ?? null) : null,
     fields,
     confirmQuestions: card?.confirm_questions ?? [],
     notes,

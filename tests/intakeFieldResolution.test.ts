@@ -96,6 +96,7 @@ function summary(id: number): SavedIntakeSummary {
     status: "접수 대기",
     createdAt: "2026-08-17 09:00",
     urgent: false,
+    urgentConfidence: null,
     needsConfirmation: true,
   };
 }

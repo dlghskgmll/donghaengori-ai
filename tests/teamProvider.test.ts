@@ -536,12 +536,33 @@ describe("TEAM-10: Team STT provider", () => {
   it("팀 /api/stt 응답의 text를 transcript로 반환한다 (key 불필요)", async () => {
     const result = await transcribeAudioFile(audioFile(), teamSttConfig, async () => ({
       text: "모레 정형외과 가야겄어",
+      needs_review: false,
     }));
     expect(result).toMatchObject({
       transcript: "모레 정형외과 가야겄어",
       provider_used: "team",
       model: "faster-whisper",
+      needs_review: false,
     });
+  });
+
+  it("U4-01 Team needs_review=true를 transcript와 함께 보존한다", async () => {
+    const result = await transcribeAudioFile(audioFile(), teamSttConfig, async () => ({
+      text: "저기 병원 가야 하는데요",
+      needs_review: true,
+    }));
+
+    expect(result.transcript).toBe("저기 병원 가야 하는데요");
+    expect(result.needs_review).toBe(true);
+  });
+
+  it("U4-02 Team needs_review=false를 경고 상태로 바꾸지 않는다", async () => {
+    const result = await transcribeAudioFile(audioFile(), teamSttConfig, async () => ({
+      text: "모레 정형외과 가야겄어",
+      needs_review: false,
+    }));
+
+    expect(result.needs_review).toBe(false);
   });
 
   it("빈 text는 성공으로 처리하지 않는다", async () => {

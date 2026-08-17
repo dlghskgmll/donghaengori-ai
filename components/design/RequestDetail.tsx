@@ -12,6 +12,7 @@ import {
   summarizeNeeds,
 } from "./analysisFields";
 import { ResolvableFieldRow } from "./ResolvableFieldRow";
+import { UrgentIntakeDetail } from "./UrgentIntakeDetail";
 
 interface RequestDetailProps {
   analysis: IntakeAnalysis;
@@ -36,6 +37,29 @@ export function RequestDetail({
   resolutions,
   onResolutionAction,
 }: RequestDetailProps) {
+  const person = analysis.caller.person_candidates[0] ?? null;
+  const providerLabel = meta?.fallback_used
+    ? "기본 분석"
+    : meta?.provider_used === "team"
+      ? "Team AI"
+      : meta?.provider_used === "openai"
+        ? "OpenAI"
+        : "Mock";
+
+  if (analysis.safety.signal_detected) {
+    return (
+      <UrgentIntakeDetail
+        target={person?.name ?? null}
+        receivedLabel={receivedLabel}
+        channelLabel={channelLabel}
+        transcript={transcript}
+        sourceLabel={`분석 · ${providerLabel}`}
+        urgentConfidence={analysis.safety.urgent_confident}
+        onReanalyze={onReanalyze}
+      />
+    );
+  }
+
   const groups = buildDesignGroups(analysis);
   const needs = summarizeNeeds(groups, (field) =>
     isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
@@ -50,14 +74,6 @@ export function RequestDetail({
   const remainingQuestions = analysis.confirmation_questions.filter(
     (question) => !attachedQuestions.has(question),
   );
-  const person = analysis.caller.person_candidates[0] ?? null;
-  const providerLabel = meta?.fallback_used
-    ? "기본 분석"
-    : meta?.provider_used === "team"
-      ? "Team AI"
-      : meta?.provider_used === "openai"
-        ? "OpenAI"
-        : "Mock";
 
   return (
     <main className="dc-detail">
@@ -69,16 +85,6 @@ export function RequestDetail({
         <span className="dc-detail-meta">{receivedLabel}</span>
         <span className="dc-chip dc-chip-neutral">AI 초안</span>
       </div>
-
-      {analysis.safety.signal_detected ? (
-        <div className="dc-alert" role="alert">
-          <span className="dc-alert-text">
-            위험 신호가 감지되었습니다. 담당자가 직접 확인해 주세요.
-            {analysis.safety.signal_type ? ` (${analysis.safety.signal_type})` : ""}
-          </span>
-          <span className="dc-alert-note">AI는 응급 여부를 판단하지 않습니다.</span>
-        </div>
-      ) : null}
 
       <div className="dc-detail-body">
         <div className="dc-detail-left">

@@ -6,6 +6,8 @@ export const TranscriptionApiResponseSchema = z.object({
   provider_used: z.enum(["openai", "team"]),
   model: z.string(),
   latency_ms: z.number().int().nonnegative(),
+  /** provider가 판단 근거를 주지 않으면 추측하지 않고 null로 둔다. */
+  needs_review: z.boolean().nullable(),
 });
 
 export type TranscriptionApiResponse = z.infer<

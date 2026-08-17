@@ -69,6 +69,7 @@ export async function POST(request: Request) {
       provider_used: result.provider_used,
       model: result.model,
       latency_ms: Date.now() - startedAt,
+      needs_review: result.needs_review ?? null,
     });
 
     return Response.json(responseBody, {

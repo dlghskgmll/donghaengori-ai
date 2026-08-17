@@ -17,18 +17,23 @@ export interface MediaRecorderLike {
   stop(): void;
 }
 
+export interface VoiceTranscription {
+  transcript: string;
+  needsReview: boolean | null;
+}
+
 export interface VoiceRecorderOptions {
   maxDurationMs: number;
   // 아래 세 함수는 실패 시 사용자에게 그대로 보여줄 한국어 메시지를 담은 Error를 던진다.
   acquireStream(): Promise<MediaStreamLike>;
   createRecorder(stream: MediaStreamLike): MediaRecorderLike;
-  transcribe(audio: Blob, mimeType: string): Promise<string>;
+  transcribe(audio: Blob, mimeType: string): Promise<VoiceTranscription>;
 }
 
 export interface VoiceRecorderCallbacks {
   onStateChange(state: VoiceRecorderState): void;
   onElapsedSeconds(seconds: number): void;
-  onTranscript(transcript: string): void;
+  onTranscript(result: VoiceTranscription): void;
   onError(message: string): void;
 }
 
@@ -168,8 +173,8 @@ export class VoiceRecorderController {
 
   private async runTranscription(blob: Blob, mimeType: string) {
     try {
-      const transcript = await this.options.transcribe(blob, mimeType);
-      this.callbacks.onTranscript(transcript);
+      const result = await this.options.transcribe(blob, mimeType);
+      this.callbacks.onTranscript(result);
     } catch (error) {
       this.callbacks.onError(
         error instanceof Error && error.message ? error.message : GENERIC_STT_ERROR,

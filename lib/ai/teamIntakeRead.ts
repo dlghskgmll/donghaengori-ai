@@ -64,6 +64,8 @@ export const TeamIntakeRowSchema = z
     status: z.string().nullable().optional(),
     confirmed: z.number().nullable().optional(),
     transfer_status: z.string().nullable().optional(),
+    // 현재 Team DB에는 보존되지 않지만, 향후 read 계약에 추가되면 그대로 받는다.
+    urgent_confident: z.boolean().nullable().optional(),
   })
   .loose();
 

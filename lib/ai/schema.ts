@@ -75,6 +75,8 @@ export const IntakeAnalysisSchema = z.object({
   safety: z.object({
     signal_detected: z.boolean(),
     signal_type: z.string().nullable(),
+    /** Team urgent 결과의 근거 충분 여부. 다른 provider이거나 미보존이면 null/없음. */
+    urgent_confident: z.boolean().nullable().optional(),
     medical_judgement: z.literal(false),
     human_escalation_required: z.boolean(),
   }),

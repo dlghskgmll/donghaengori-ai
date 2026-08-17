@@ -12,6 +12,7 @@ import {
   ResolvableFieldRow,
   type ResolvableField,
 } from "./ResolvableFieldRow";
+import { UrgentIntakeDetail } from "./UrgentIntakeDetail";
 
 interface SavedIntakeDetailProps {
   detail: SavedIntakeDetailView;
@@ -72,6 +73,19 @@ export function SavedIntakeDetail({
     );
   }
 
+  if (detail.urgent) {
+    return (
+      <UrgentIntakeDetail
+        target={detail.target}
+        receivedLabel={detail.createdAt ?? "접수 시각 미상"}
+        channelLabel={detail.channel ?? "경로 미상"}
+        transcript={detail.utterance}
+        sourceLabel={`저장된 접수 · #${detail.id}`}
+        urgentConfidence={detail.urgentConfidence}
+      />
+    );
+  }
+
   const fields = detail.fields.map((field) =>
     toResolvableField(field, detail.confirmQuestions),
   );
@@ -110,15 +124,6 @@ export function SavedIntakeDetail({
           <span className="dc-chip dc-chip-neutral">{detail.status}</span>
         ) : null}
       </div>
-
-      {detail.urgent ? (
-        <div className="dc-alert" role="alert">
-          <span className="dc-alert-text">
-            긴급으로 접수된 요청입니다. 담당자가 직접 확인해 주세요.
-          </span>
-          <span className="dc-alert-note">AI는 응급 여부를 판단하지 않습니다.</span>
-        </div>
-      ) : null}
 
       <div className="dc-detail-body">
         <div className="dc-detail-left">

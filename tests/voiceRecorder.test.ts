@@ -58,28 +58,37 @@ interface Harness {
   createRecorder: ReturnType<typeof vi.fn>;
   states: VoiceRecorderState[];
   transcripts: string[];
+  reviewFlags: Array<boolean | null>;
   errors: string[];
   elapsed: number[];
 }
 
 function makeHarness(options?: {
   hasAudio?: boolean;
-  transcribeImpl?: () => Promise<string>;
+  transcribeImpl?: () => Promise<{
+    transcript: string;
+    needsReview: boolean | null;
+  }>;
 }): Harness {
   const states: VoiceRecorderState[] = [];
   const transcripts: string[] = [];
+  const reviewFlags: Array<boolean | null> = [];
   const errors: string[] = [];
   const elapsed: number[] = [];
 
   const transcribe = vi.fn(
-    options?.transcribeImpl ?? (async () => "변환된 문장"),
+    options?.transcribeImpl ??
+      (async () => ({ transcript: "변환된 문장", needsReview: false })),
   );
   const createRecorder = vi.fn(() => new FakeRecorder(options?.hasAudio ?? true));
 
   const callbacks: VoiceRecorderCallbacks = {
     onStateChange: (state) => states.push(state),
     onElapsedSeconds: (seconds) => elapsed.push(seconds),
-    onTranscript: (transcript) => transcripts.push(transcript),
+    onTranscript: (result) => {
+      transcripts.push(result.transcript);
+      reviewFlags.push(result.needsReview);
+    },
     onError: (message) => errors.push(message),
   };
 
@@ -93,7 +102,16 @@ function makeHarness(options?: {
     callbacks,
   );
 
-  return { controller, transcribe, createRecorder, states, transcripts, errors, elapsed };
+  return {
+    controller,
+    transcribe,
+    createRecorder,
+    states,
+    transcripts,
+    reviewFlags,
+    errors,
+    elapsed,
+  };
 }
 
 beforeEach(() => {
@@ -136,6 +154,7 @@ describe("voice recorder demo hardening", () => {
     expect(h.transcribe).toHaveBeenCalledTimes(1);
     expect(h.controller.getState()).toBe("idle");
     expect(h.transcripts).toEqual(["변환된 문장"]);
+    expect(h.reviewFlags).toEqual([false]);
 
     // 자동 종료 후 사용자가 종료 버튼을 다시 눌러도 중복 호출되지 않는다.
     h.controller.stop();
@@ -214,7 +233,7 @@ describe("voice recorder demo hardening", () => {
           );
         },
         createRecorder: () => new FakeRecorder(true),
-        transcribe: async () => "unused",
+        transcribe: async () => ({ transcript: "unused", needsReview: null }),
       },
       {
         onStateChange: () => {},

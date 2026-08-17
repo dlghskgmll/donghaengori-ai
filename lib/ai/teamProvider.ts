@@ -51,6 +51,7 @@ const TeamCardSchema = z
 const TeamIntakeResponseSchema = z
   .object({
     urgent: z.boolean(),
+    urgent_confident: z.boolean().optional(),
     urgent_message: z.string().nullable().optional(),
     intent: z.string().nullable().optional(),
     intent_confidence: z.number().nullable().optional(),
@@ -196,8 +197,34 @@ export function normalizeTeamResponse(
       : 0.5;
 
   if (team.urgent || !team.card) {
-    if (team.urgent) warnings.push("TEAM_URGENT");
-    else warnings.push("TEAM_CARD_MISSING");
+    const urgentConfidence = team.urgent
+      ? (team.urgent_confident ?? null)
+      : null;
+    if (team.urgent) {
+      warnings.push("TEAM_URGENT");
+      warnings.push(
+        urgentConfidence === true
+          ? "TEAM_URGENT_CONFIDENT"
+          : urgentConfidence === false
+            ? "TEAM_URGENT_NEEDS_REVIEW"
+            : "TEAM_URGENT_CONFIDENCE_UNKNOWN",
+      );
+    } else {
+      warnings.push("TEAM_CARD_MISSING");
+    }
+
+    const interruptedEvidence = team.urgent
+      ? urgentConfidence === true
+        ? "긴급 신호로 접수 분석을 진행하지 않음"
+        : "긴급 여부를 사람이 확인하도록 접수 분석을 진행하지 않음"
+      : "Team 접수카드가 없어 분석을 진행하지 않음";
+    const confirmationQuestion = team.urgent
+      ? urgentConfidence === true
+        ? "긴급 신호가 감지되어 담당자가 직접 확인·전환해야 합니다."
+        : urgentConfidence === false
+          ? "긴급 여부를 바로 판단하기 어려워 담당자가 원문을 확인해야 합니다."
+          : "긴급 신호의 확신도 정보가 없어 담당자가 원문을 확인해야 합니다."
+      : "접수카드가 생성되지 않아 담당자가 원문을 확인해야 합니다.";
 
     const analysis: IntakeAnalysis = IntakeAnalysisSchema.parse({
       schema_version: "1.0",
@@ -208,13 +235,13 @@ export function normalizeTeamResponse(
           value: null,
           status: "NEEDS_CONFIRMATION",
           confidence: 0,
-          evidence: ["긴급 신호로 접수 분석을 진행하지 않음"],
+          evidence: [interruptedEvidence],
         },
         time: {
           value: null,
           status: "NEEDS_CONFIRMATION",
           confidence: 0,
-          evidence: ["긴급 신호로 접수 분석을 진행하지 않음"],
+          evidence: [interruptedEvidence],
         },
       },
       hospital: { candidates: [] },
@@ -222,22 +249,33 @@ export function normalizeTeamResponse(
         value: null,
         status: "NEEDS_CONFIRMATION",
         confidence: 0,
-        evidence: ["긴급 신호로 접수 분석을 진행하지 않음"],
+        evidence: [interruptedEvidence],
       },
       additional_requests: [],
       care_context: { mobility_notes: [] },
-      confirmation_questions: [
-        "긴급 신호가 감지되어 담당자가 직접 통화로 확인해야 합니다.",
-      ],
+      confirmation_questions: [confirmationQuestion],
       safety: {
         signal_detected: Boolean(team.urgent),
-        signal_type: team.urgent ? "TEAM_URGENT" : null,
+        signal_type: team.urgent
+          ? urgentConfidence === true
+            ? "TEAM_URGENT_CONFIDENT"
+            : urgentConfidence === false
+              ? "TEAM_URGENT_NEEDS_REVIEW"
+              : "TEAM_URGENT_CONFIDENCE_UNKNOWN"
+          : null,
+        urgent_confident: urgentConfidence,
         medical_judgement: false,
         human_escalation_required: Boolean(team.urgent),
       },
       summary:
         team.urgent_message?.trim() ||
-        "긴급 신호 감지 — 담당자 직접 확인이 필요합니다.",
+        (team.urgent
+          ? urgentConfidence === true
+            ? "긴급 신호 감지 — 담당자 직접 확인이 필요합니다."
+            : urgentConfidence === false
+              ? "긴급 여부 확인 필요 — 담당자가 원문을 확인해야 합니다."
+              : "긴급 확신도 정보 없음 — 담당자가 원문을 확인해야 합니다."
+          : "Team 접수카드가 없어 담당자 확인이 필요합니다."),
       human_review_required: true,
     });
     return { analysis, warnings };

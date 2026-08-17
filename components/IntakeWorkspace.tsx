@@ -31,6 +31,7 @@ import {
   initialIntakeFieldResolutionState,
   intakeFieldResolutionReducer,
 } from "@/lib/ui/intakeFieldResolution";
+import { getUrgentPresentation } from "@/lib/ui/urgentIntake";
 import { AppShell, type ShellTab } from "./design/AppShell";
 import { IntakeComposer, type IntakeComposerValues } from "./design/IntakeComposer";
 import { PlaceholderTab } from "./design/PlaceholderTab";
@@ -83,43 +84,57 @@ function previewRow(record: PreviewRecord): RequestRow {
   const needs = summarizeNeeds(groups);
   const person = record.analysis.caller.person_candidates[0] ?? null;
   const hospital = record.analysis.hospital.candidates[0] ?? null;
+  const urgent = getUrgentPresentation(
+    record.analysis.safety.signal_detected &&
+      record.analysis.safety.human_escalation_required,
+    record.analysis.safety.urgent_confident,
+  );
 
   return {
     id: record.id,
     title: person ? person.name : "대상자 확인 필요",
-    line2: hospital
-      ? `${hospital.name}${hospital.status === "INFERRED" ? " · 추정" : ""}`
-      : "병원 확인 필요",
+    line2: urgent
+      ? "카드 생성 중단 · 사람 확인 우선"
+      : hospital
+        ? `${hospital.name}${hospital.status === "INFERRED" ? " · 추정" : ""}`
+        : "병원 확인 필요",
     meta: `${timeLabel(record.receivedAt)} 분석`,
-    // 저장된 접수와 헷갈리지 않게 미리보기임을 항상 표시한다.
-    badge: "미리보기",
-    badgeTone: "neutral",
-    statusText: needs ? "확인 필요" : null,
-    alert: record.analysis.safety.signal_detected
-      ? "위험 신호 — 담당자 직접 확인"
-      : null,
+    // 긴급 의미를 badge 하나로 우선 표시하고 미리보기 여부는 작은 상태 텍스트로 둔다.
+    badge: urgent?.label ?? "미리보기",
+    badgeTone: urgent?.tone ?? "neutral",
+    statusText: urgent ? "미리보기" : needs ? "확인 필요" : null,
+    alert: urgent?.listLine ?? null,
+    alertTone: urgent?.tone,
     unread: true,
   };
 }
 
 function savedRow(item: SavedIntakeSummary): RequestRow {
+  const urgent = getUrgentPresentation(item.urgent, item.urgentConfidence);
   return {
     id: `saved-${item.id}`,
     title: item.target ?? "대상자 확인 필요",
-    line2: item.hospital
-      ? `${item.hospital}${item.hospitalStatus === "INFERRED" ? " · 추정" : ""}`
-      : "병원 확인 필요",
+    line2: urgent
+      ? "카드 없음 · 사람 확인 우선"
+      : item.hospital
+        ? `${item.hospital}${item.hospitalStatus === "INFERRED" ? " · 추정" : ""}`
+        : "병원 확인 필요",
     meta: [item.createdAt, item.channel].filter(Boolean).join(" · ") || "접수 시각 미상",
-    badge: item.urgent ? "긴급" : item.needsConfirmation ? "확인 필요" : null,
-    badgeTone: item.urgent ? "danger" : "warn",
-    statusText: item.status,
-    alert: item.urgent ? "긴급 접수 — 담당자 직접 확인" : null,
+    badge: urgent?.label ?? (item.needsConfirmation ? "확인 필요" : null),
+    badgeTone: urgent?.tone ?? "warn",
+    statusText: urgent
+      ? item.status === "긴급 처리됨"
+        ? item.status
+        : null
+      : item.status,
+    alert: urgent?.listLine ?? null,
+    alertTone: urgent?.tone,
     unread: false,
   };
 }
 
 export function IntakeWorkspace() {
-  const [tab, setTab] = useState<ShellTab>("request");
+  const [tab, setTab] = useState<ShellTab>("home");
 
   const [inbox, dispatch] = useReducer(
     requestInboxReducer,

@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CircleCheck, LoaderCircle, Mic, Square, X } from "lucide-react";
+import {
+  CircleCheck,
+  LoaderCircle,
+  Mic,
+  Square,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { TranscriptionApiResponseSchema } from "@/lib/ai/transcriptionSchema";
+import { getSttReviewMessage } from "@/lib/ui/sttReview";
 import {
   VoiceRecorderController,
   type MediaRecorderLike,
@@ -18,6 +26,22 @@ interface VoiceInputProps {
 export const MAX_RECORDING_MS = 30_000;
 
 const PREFERRED_MIME_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"];
+
+export function SttReviewNotice({
+  needsReview,
+}: {
+  needsReview: boolean | null | undefined;
+}) {
+  const message = getSttReviewMessage(needsReview);
+  if (!message) return null;
+
+  return (
+    <div className="voice-review-warning" role="status" aria-live="polite">
+      <TriangleAlert size={14} aria-hidden="true" />
+      <span>{message}</span>
+    </div>
+  );
+}
 
 function pickMimeType() {
   if (typeof MediaRecorder === "undefined") return null;
@@ -94,7 +118,7 @@ function createMicrophoneRecorder(stream: MediaStreamLike): MediaRecorderLike {
   return adapter;
 }
 
-async function requestTranscription(audio: Blob, mimeType: string) {
+export async function requestTranscription(audio: Blob, mimeType: string) {
   const form = new FormData();
   form.append("audio", new File([audio], fileNameFor(mimeType), { type: mimeType }));
   const response = await fetch("/api/v1/transcriptions", {
@@ -118,7 +142,10 @@ async function requestTranscription(audio: Blob, mimeType: string) {
   if (!validated.success || !validated.data.transcript.trim()) {
     throw new Error("음성을 인식하지 못했습니다. 다시 녹음하거나 직접 입력해 주세요.");
   }
-  return validated.data.transcript.trim();
+  return {
+    transcript: validated.data.transcript,
+    needsReview: validated.data.needs_review,
+  };
 }
 
 export function VoiceInput({ disabled, onTranscript }: VoiceInputProps) {
@@ -126,6 +153,7 @@ export function VoiceInput({ disabled, onTranscript }: VoiceInputProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [transcriptReady, setTranscriptReady] = useState(false);
+  const [needsReview, setNeedsReview] = useState<boolean | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   const controllerRef = useRef<VoiceRecorderController | null>(null);
 
@@ -144,9 +172,11 @@ export function VoiceInput({ disabled, onTranscript }: VoiceInputProps) {
       {
         onStateChange: setState,
         onElapsedSeconds: setElapsedSeconds,
-        onTranscript: (transcript) => {
+        onTranscript: (result) => {
           setTranscriptReady(true);
-          onTranscriptRef.current(transcript);
+          setNeedsReview(result.needsReview);
+          // Team이 돌려준 문장을 그대로 입력창에 옮긴다. 자동 보정·분석하지 않는다.
+          onTranscriptRef.current(result.transcript);
         },
         onError: setError,
       },
@@ -161,6 +191,7 @@ export function VoiceInput({ disabled, onTranscript }: VoiceInputProps) {
   const handleStart = () => {
     setError(null);
     setTranscriptReady(false);
+    setNeedsReview(null);
     void controllerRef.current?.start();
   };
 
@@ -210,7 +241,9 @@ export function VoiceInput({ disabled, onTranscript }: VoiceInputProps) {
           )}
         </button>
       )}
-      {transcriptReady && state === "idle" ? (
+      {transcriptReady && state === "idle" && needsReview === true ? (
+        <SttReviewNotice needsReview={needsReview} />
+      ) : transcriptReady && state === "idle" ? (
         <div className="voice-success" role="status">
           <CircleCheck size={13} aria-hidden="true" />
           음성을 문자로 변환했습니다. 아래 내용을 확인하거나 수정한 뒤 ‘AI

@@ -59,7 +59,7 @@ export function loadTranscriptionConfig(
 export type TranscriptionCall = (params: {
   file: File;
   model: string;
-}) => Promise<{ text: string }>;
+}) => Promise<{ text: string; needs_review?: boolean }>;
 
 function classifyTranscriptionError(error: unknown): TranscriptionError {
   if (error instanceof TranscriptionError) return error;
@@ -82,6 +82,8 @@ export interface TranscriptionResult {
   transcript: string;
   provider_used: SttProviderName;
   model: string;
+  /** Team STT가 사람의 원문 검토를 요구할 때만 전달한다. */
+  needs_review?: boolean;
 }
 
 // Team backend /api/stt (local faster-whisper) 호출. key가 필요 없다.
@@ -105,8 +107,16 @@ function teamTranscriptionCall(config: TranscriptionConfig): TranscriptionCall {
         "Team 음성 변환 호출에 실패했습니다.",
       );
     }
-    const payload = (await response.json()) as { text?: unknown };
-    return { text: typeof payload.text === "string" ? payload.text : "" };
+    const payload = (await response.json()) as {
+      text?: unknown;
+      needs_review?: unknown;
+    };
+    return {
+      text: typeof payload.text === "string" ? payload.text : "",
+      ...(typeof payload.needs_review === "boolean"
+        ? { needs_review: payload.needs_review }
+        : {}),
+    };
   };
 }
 
@@ -117,13 +127,13 @@ export async function transcribeAudioFile(
 ): Promise<TranscriptionResult> {
   if (config.provider === "team") {
     const doTeamCall = call ?? teamTranscriptionCall(config);
-    let teamText: string;
+    let teamResult: Awaited<ReturnType<TranscriptionCall>>;
     try {
-      ({ text: teamText } = await doTeamCall({ file, model: "faster-whisper" }));
+      teamResult = await doTeamCall({ file, model: "faster-whisper" });
     } catch (error) {
       throw classifyTranscriptionError(error);
     }
-    const teamTranscript = teamText.trim();
+    const teamTranscript = teamResult.text.trim();
     if (!teamTranscript) {
       throw new TranscriptionError(
         "STT_EMPTY_TRANSCRIPT",
@@ -134,6 +144,9 @@ export async function transcribeAudioFile(
       transcript: teamTranscript,
       provider_used: "team",
       model: "faster-whisper",
+      ...(typeof teamResult.needs_review === "boolean"
+        ? { needs_review: teamResult.needs_review }
+        : {}),
     };
   }
 

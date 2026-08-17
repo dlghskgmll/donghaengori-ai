@@ -52,9 +52,11 @@ describe("transcriptions route", () => {
       "김영자인데 내일 오전 10시에 순천 OO병원 정형외과 가려고요",
     );
     expect(parsed.provider_used).toBe("openai");
+    expect(parsed.needs_review).toBeNull();
     expect(Object.keys(payload as object).sort()).toEqual([
       "latency_ms",
       "model",
+      "needs_review",
       "provider_used",
       "transcript",
     ]);
@@ -76,6 +78,22 @@ describe("transcriptions route", () => {
       "음성 변환에 실패했습니다. 다시 시도하거나 직접 입력해 주세요.",
     );
     expect(JSON.stringify(payload)).not.toMatch(/sk-[A-Za-z0-9]|boom|stack/);
+  });
+
+  it("U4 API: Team needs_review를 browser 응답까지 전달한다", async () => {
+    transcribeAudioFileMock.mockResolvedValue({
+      transcript: "저기 병원 가야 하는데요",
+      provider_used: "team",
+      model: "faster-whisper",
+      needs_review: true,
+    });
+
+    const response = await POST(audioRequest(fakeWebmFile(2048)));
+    const parsed = TranscriptionApiResponseSchema.parse(await response.json());
+
+    expect(response.status).toBe(200);
+    expect(parsed.transcript).toBe("저기 병원 가야 하는데요");
+    expect(parsed.needs_review).toBe(true);
   });
 
   it("CASE 19: 빈 오디오 파일은 provider를 호출하지 않고 거절한다", async () => {
