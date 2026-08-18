@@ -136,7 +136,7 @@ export function ResolvableFieldRow({
                     if (value) onVerify(value);
                   }}
                 >
-                  {verifyBusy ? "반영 중…" : "통화로 확인함"}
+                  {verifyBusy ? "반영 중…" : "확인함"}
                 </button>
               ) : null}
             </span>
@@ -265,7 +265,7 @@ export function ResolvableFieldRow({
                     disabled={verifyBusy}
                     onClick={() => onVerify(resolved.value)}
                   >
-                    {verifyBusy ? "반영 중…" : "이 값 통화로 확인함"}
+                    {verifyBusy ? "반영 중…" : "이 값 확인함"}
                   </button>
                 ) : null}
               </span>

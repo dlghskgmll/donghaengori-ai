@@ -62,7 +62,8 @@ export function SavedIntakeAuditSection({
  *
  * **이 버튼은 "통화로 확인했다" 는 뜻이다.** 화면에서 값을 고른 것과 다르다 —
  * 그 구분이 무너지면 사고가 났을 때 누가 실제로 확인했는지 답할 수 없다.
- * 그래서 라벨을 '통화로 확인함' 으로 두고, 확인 전화를 마친 뒤 쓰라고 적는다.
+ * 라벨은 짧게 '확인함' 으로 쓰되, 그 뜻(통화로 확인한 값만 게이트를
+ * 푼다)은 목록 아래 안내문이 지고 간다.
  */
 function VerifyBlocker({
   blocker,
@@ -82,7 +83,7 @@ function VerifyBlocker({
         value={value}
         disabled={busy}
         aria-label={`${blocker.label} 확인 결과`}
-        placeholder="통화로 확인한 값"
+        placeholder="확인한 값"
         onChange={(event) => setValue(event.target.value)}
       />
       <button
@@ -91,7 +92,7 @@ function VerifyBlocker({
         disabled={!ready}
         onClick={ready ? () => onVerify(blocker.field, value.trim()) : undefined}
       >
-        {busy ? "반영하는 중…" : "통화로 확인함"}
+        {busy ? "반영하는 중…" : "확인함"}
       </button>
     </div>
   );
