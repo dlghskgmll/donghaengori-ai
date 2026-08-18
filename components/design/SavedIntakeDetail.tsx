@@ -128,14 +128,20 @@ export function SavedIntakeDetail({
   const remainingQuestions = detail.confirmQuestions.filter(
     (question) => !attachedQuestions.has(question),
   );
+  // 생년월일은 어르신 신원 참고값이고 server gate가 확정 조건으로 요구하지 않는다.
+  // 헤더의 "확인할 정보 N개"는 지금 해야 할 일을 세는 숫자이므로 여기서 빼둔다 —
+  // 넣으면 전화 접수마다 처리할 일이 하나 더 있는 것처럼 보인다.
   const pendingCount = fields.filter(
     (field) =>
+      field.key !== "birth" &&
       field.status === "NEEDS_CONFIRMATION" &&
       !isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
   ).length;
 
-  const visitFields = fields.filter((field) => field.key !== "target");
-  const targetFields = fields.filter((field) => field.key === "target");
+  const ELDER_KEYS = new Set(["target", "birth"]);
+  const visitFields = fields.filter((field) => !ELDER_KEYS.has(field.key));
+  // 대상자와 생년월일은 둘 다 어르신 본인 정보라 같은 묶음으로 보여준다.
+  const elderFields = fields.filter((field) => ELDER_KEYS.has(field.key));
 
   const renderField = (field: ResolvableField) => (
     <ResolvableFieldRow
@@ -185,8 +191,8 @@ export function SavedIntakeDetail({
             <div className="dcw-rows">{visitFields.map(renderField)}</div>
           </section>
 
-          <section className="dcw-section" aria-label="요청 정보">
-            <h2 className="dcw-section-title">요청 정보</h2>
+          <section className="dcw-section" aria-label="어르신 정보">
+            <h2 className="dcw-section-title">어르신 정보</h2>
             <div className="dcw-rows">
               {detail.intent ? (
                 <div className="dcw-row">
@@ -198,7 +204,7 @@ export function SavedIntakeDetail({
                   </div>
                 </div>
               ) : null}
-              {targetFields.map(renderField)}
+              {elderFields.map(renderField)}
             </div>
           </section>
 

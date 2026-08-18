@@ -44,6 +44,7 @@ const ENTRY_ACTION_LABELS: Record<string, string> = {
   dept: "진료과 입력",
   department: "진료과 입력",
   target: "대상자 입력",
+  birth: "생년월일 입력",
 };
 
 export function entryActionLabel(fieldKey: string): string {
