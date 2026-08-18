@@ -30,6 +30,7 @@ interface SavedIntakeDetailProps {
   auditState: IntakeAuditState;
   onAuditRetry?: () => void;
   onConfirm?: (acknowledge: boolean, reason: string | null) => void;
+  onVerify?: (field: string, value: string) => void;
   confirmBusy?: boolean;
   confirmError?: string | null;
 }
@@ -62,6 +63,7 @@ export function SavedIntakeDetail({
   auditState,
   onAuditRetry,
   onConfirm,
+  onVerify,
   confirmBusy,
   confirmError,
 }: SavedIntakeDetailProps) {
@@ -187,6 +189,7 @@ export function SavedIntakeDetail({
             confirmed={detail.confirmed}
             gate={detail.gate}
             onConfirm={onConfirm}
+            onVerify={onVerify}
             busy={confirmBusy}
             error={confirmError}
           />

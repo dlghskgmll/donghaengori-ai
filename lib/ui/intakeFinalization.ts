@@ -65,3 +65,22 @@ export function intakeFinalizationMode(
   if (gate.hardBlock) return "hard-block";
   return "soft-block";
 }
+
+/**
+ * 서버가 verify 를 받는 항목.
+ *
+ * **백엔드의 VerifyIn.field 와 같아야 한다** (donghaenggori/web/api.py). 여기에
+ * 없는 blocker 는 화면에서 풀 수 없으므로 입력을 그리지 않는다 — 그려 두면
+ * 눌러도 422 만 나고, 복지사는 왜 안 되는지 알 방법이 없다.
+ *
+ * 반대로 서버가 받는 항목을 여기서 빠뜨리면 **확정이 영영 안 된다.** 화면에
+ * 푸는 수단이 없는 blocker 가 남기 때문이다. 실제로 verify 를 아무 화면에서도
+ * 부르지 않아 게이트에 걸린 접수를 확정할 수 없던 적이 있다.
+ */
+export const VERIFIABLE_FIELDS = ["target", "hospital", "dept", "date", "time"] as const;
+
+export type VerifiableField = (typeof VERIFIABLE_FIELDS)[number];
+
+export function isVerifiableField(field: string): field is VerifiableField {
+  return (VERIFIABLE_FIELDS as readonly string[]).includes(field);
+}

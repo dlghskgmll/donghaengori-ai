@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { SavedIntakeGate } from "@/lib/ai/savedIntakeView";
+import type { SavedIntakeGate, SavedIntakeGateBlocker } from "@/lib/ai/savedIntakeView";
 import {
   intakeAuditTone,
   intakeFinalizationMode,
+  isVerifiableField,
   type IntakeAuditState,
 } from "@/lib/ui/intakeFinalization";
 
@@ -56,7 +57,55 @@ export function SavedIntakeAuditSection({
   );
 }
 
-function GateBlockers({ gate }: { gate: SavedIntakeGate }) {
+/**
+ * blocker 하나를 푸는 입력.
+ *
+ * **이 버튼은 "통화로 확인했다" 는 뜻이다.** 화면에서 값을 고른 것과 다르다 —
+ * 그 구분이 무너지면 사고가 났을 때 누가 실제로 확인했는지 답할 수 없다.
+ * 그래서 라벨을 '통화로 확인함' 으로 두고, 확인 전화를 마친 뒤 쓰라고 적는다.
+ */
+function VerifyBlocker({
+  blocker,
+  busy,
+  onVerify,
+}: {
+  blocker: SavedIntakeGateBlocker;
+  busy: boolean;
+  onVerify: (field: string, value: string) => void;
+}) {
+  const [value, setValue] = useState(blocker.value ?? blocker.spoken ?? "");
+  const ready = value.trim().length > 0 && !busy;
+  return (
+    <div className="dc-blocker-verify">
+      <input
+        type="text"
+        value={value}
+        disabled={busy}
+        aria-label={`${blocker.label} 확인 결과`}
+        placeholder="통화로 확인한 값"
+        onChange={(event) => setValue(event.target.value)}
+      />
+      <button
+        type="button"
+        className="dc-btn-primary"
+        disabled={!ready}
+        onClick={ready ? () => onVerify(blocker.field, value.trim()) : undefined}
+      >
+        {busy ? "반영하는 중…" : "통화로 확인함"}
+      </button>
+    </div>
+  );
+}
+
+function GateBlockers({
+  gate,
+  busy,
+  onVerify,
+}: {
+  gate: SavedIntakeGate;
+  busy?: boolean;
+  onVerify?: (field: string, value: string) => void;
+}) {
   if (gate.blockers.length === 0) return null;
   return (
     <div className="dc-final-blockers">
@@ -66,8 +115,17 @@ function GateBlockers({ gate }: { gate: SavedIntakeGate }) {
           <span>{blocker.label}</span>
           <p>{blocker.question ?? "담당자 확인이 필요합니다."}</p>
           {blocker.spoken ? <small>원문 표현: {blocker.spoken}</small> : null}
+          {onVerify && isVerifiableField(blocker.field) ? (
+            <VerifyBlocker blocker={blocker} busy={!!busy} onVerify={onVerify} />
+          ) : null}
         </div>
       ))}
+      {onVerify ? (
+        <small className="dc-blocker-note">
+          확인 전화를 마친 뒤 들은 값을 넣으세요. 화면에서 고른 값이 아니라
+          <strong> 통화로 확인한 값</strong>만 게이트를 풉니다.
+        </small>
+      ) : null}
     </div>
   );
 }
@@ -128,11 +186,13 @@ export function SavedIntakeFinalization({
   confirmed,
   gate,
   onConfirm,
+  onVerify,
   busy = false,
   error = null,
 }: {
   confirmed: boolean;
   gate: SavedIntakeGate | null;
+  onVerify?: (field: string, value: string) => void;
   /** 확정을 실제로 보낸다. 없으면 예전처럼 비활성으로 그린다. */
   onConfirm?: (acknowledge: boolean, reason: string | null) => void;
   busy?: boolean;
@@ -167,7 +227,7 @@ export function SavedIntakeFinalization({
           <strong>확인 전에는 확정할 수 없습니다</strong>
           <span>기관 정책에 따라 미확인 확정도 허용되지 않습니다.</span>
         </div>
-        <GateBlockers gate={gate} />
+        <GateBlockers gate={gate} busy={busy} onVerify={onVerify} />
       </section>
     );
   }
@@ -184,7 +244,7 @@ export function SavedIntakeFinalization({
           서버 확정 조건이 연결되지 않아 확정 가능 여부를 판단하지 않습니다.
         </p>
       ) : gate ? (
-        <GateBlockers gate={gate} />
+        <GateBlockers gate={gate} busy={busy} onVerify={onVerify} />
       ) : null}
 
       <div className="dc-final-actions">

@@ -3938,6 +3938,47 @@ button:disabled {
   line-height: 1.45;
 }
 
+/* blocker 를 푸는 입력 — '통화로 확인함'.
+   경고 카드(#fde68a/#fffdf5) 안에 들어가므로 배경은 카드가 담당하고 여기서는
+   배치만 잡는다. 높이·모서리·글자 크기는 같은 화면의 다른 폼 컨트롤과 맞춘다. */
+.dc-blocker-verify {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dc-blocker-verify input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid #fcd34d;
+  border-radius: 7px;
+  background: #fff;
+  color: #44403c;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.dc-blocker-verify input::placeholder { color: #b8a888; }
+.dc-blocker-verify input:disabled { background: #fafaf9; color: #a8a29e; }
+
+.dc-blocker-verify button {
+  flex: none;
+  height: 30px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+
+/* 이 버튼이 무엇을 뜻하는지 — 화면에서 고른 값과 통화로 확인한 값은 다르다. */
+.dc-blocker-note {
+  padding-top: 7px;
+  border-top: 1px solid rgba(217, 119, 6, 0.16);
+  line-height: 1.5;
+}
+
+.dc-blocker-note strong { font-weight: 800; }
+
 .dc-final-hard-block,
 .dc-final-complete {
   display: flex;

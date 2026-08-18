@@ -29,6 +29,7 @@ import {
 } from "@/lib/ui/savedIntakePolling";
 import {
   confirmSavedIntake,
+  verifySavedIntakeField,
   fetchSavedDetail,
   fetchSavedList,
   savedIntakeAuthHeader,
@@ -411,6 +412,39 @@ export function IntakeWorkspace() {
     [detail, loadDetail],
   );
 
+  /**
+   * blocker 하나를 푼다 — **게이트를 푸는 유일한 경로다.**
+   *
+   * 서버에서 이 호출은 "통화로 확인했다" 를 뜻한다. 화면에서 값을 고른 것과
+   * 구분되지 않으면 사고가 났을 때 누가 실제로 확인했는지 답할 수 없다.
+   *
+   * 반영 뒤 상세를 다시 읽는다. 하나를 풀면 남은 blocker 가 줄고, 마지막
+   * 하나였으면 확정 버튼이 열린다 — 그걸 화면이 바로 보여줘야 한다.
+   */
+  const verifyIntakeField = useCallback(
+    async (savedId: number, field: string, value: string) => {
+      setConfirmBusy(true);
+      setConfirmError(null);
+      try {
+        await verifySavedIntakeField(
+          savedId,
+          field as "target" | "hospital" | "dept" | "date" | "time",
+          value,
+        );
+        await loadDetail(savedId);
+        setReadRefreshNonce((n) => n + 1);
+      } catch (error) {
+        setConfirmError(
+          error instanceof Error ? error.message : "확인 결과를 반영하지 못했습니다.",
+        );
+        await loadDetail(savedId);
+      } finally {
+        setConfirmBusy(false);
+      }
+    },
+    [loadDetail],
+  );
+
   // 저장된 접수와 미리보기를 함께 보여주되 id 체계를 분리해 중복되지 않게 한다.
   const rows = useMemo(() => {
     // 미리보기는 저장조차 되지 않았으므로 확정일 수 없다.
@@ -543,6 +577,13 @@ export function IntakeWorkspace() {
                 Number(selectedId.slice("saved-".length)),
                 acknowledge,
                 reason,
+              )
+            }
+            onVerify={(field, value) =>
+              void verifyIntakeField(
+                Number(selectedId.slice("saved-".length)),
+                field,
+                value,
               )
             }
             confirmBusy={confirmBusy}

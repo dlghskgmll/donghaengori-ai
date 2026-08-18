@@ -4,7 +4,9 @@ import type { SavedIntakeGate } from "../lib/ai/savedIntakeView";
 import {
   intakeAuditTone,
   intakeFinalizationMode,
+  isVerifiableField,
   loadedIntakeAuditState,
+  VERIFIABLE_FIELDS,
   type IntakeAuditState,
 } from "../lib/ui/intakeFinalization";
 
@@ -124,5 +126,36 @@ describe("U9 server finalization gate", () => {
         gate({ allowed: true, hardBlock: true, blockers: [] }),
       ),
     ).toBe("regular");
+  });
+});
+
+/**
+ * 게이트를 푸는 유일한 경로가 verify 다. 화면이 그 입력을 그릴지 말지를 이
+ * 목록으로 정하므로, 백엔드(VerifyIn.field)와 어긋나면 두 방향 다 나쁘다.
+ *  · 여기에만 있으면 → 눌러도 422, 이유는 화면에 안 나온다
+ *  · 백엔드에만 있으면 → 그 blocker 를 풀 수단이 없어 확정이 영영 막힌다
+ */
+describe("verify 가능한 항목", () => {
+  it("백엔드 VerifyIn.field 와 같은 목록이다", () => {
+    expect([...VERIFIABLE_FIELDS]).toEqual([
+      "target",
+      "hospital",
+      "dept",
+      "date",
+      "time",
+    ]);
+  });
+
+  it("게이트가 막는 항목은 전부 화면에서 풀 수 있다", () => {
+    // gate.py 의 BLOCKING = ("target", "hospital", "date", "time")
+    for (const field of ["target", "hospital", "date", "time"]) {
+      expect(isVerifiableField(field)).toBe(true);
+    }
+  });
+
+  it("모르는 항목에는 입력을 그리지 않는다", () => {
+    for (const field of ["need_level", "spoken_name", "", "TARGET"]) {
+      expect(isVerifiableField(field)).toBe(false);
+    }
   });
 });
