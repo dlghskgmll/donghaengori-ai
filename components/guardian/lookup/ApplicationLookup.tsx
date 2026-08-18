@@ -31,7 +31,7 @@ export function ApplicationLookup() {
     setPending(true);
     setError(null);
     try {
-      const response = await fetch("/api/guardian/applications/lookup", {
+      const response = await fetch("/api/applications/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ applicationNumber: number, guardianPhone: phone }),
@@ -44,7 +44,7 @@ export function ApplicationLookup() {
       }
       // 상세 화면이 서버 재조회에 쓸 입력값. URL에는 신청번호만 노출된다.
       rememberApplication(payload.application.applicationNumber, phone);
-      router.push(`/guardian/applications/${encodeURIComponent(payload.application.applicationNumber)}`);
+      router.push(`/applications/${encodeURIComponent(payload.application.applicationNumber)}`);
     } catch {
       setError("잠시 문제가 발생했어요. 조금 뒤 다시 시도해주세요.");
       setPending(false);
@@ -55,7 +55,7 @@ export function ApplicationLookup() {
     <div style={{ minHeight: "100vh", background: "var(--cream)" }}>
       <div className="gd-topbar">
         <div className="gd-topbar__inner">
-          <Link href="/guardian" className="iconbtn" aria-label="홈으로">
+          <Link href="/" className="iconbtn" aria-label="홈으로">
             <ChevronLeftIcon />
           </Link>
           <span className="gd-topbar__title">신청 확인</span>

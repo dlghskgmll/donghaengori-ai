@@ -21,10 +21,10 @@ export function CompleteView() {
           신청번호가 있으시면 조회 화면에서 확인해 주세요.
         </p>
         <div className="center-screen__actions">
-          <Link href="/guardian/applications/lookup" className="btn btn--primary btn--md">
+          <Link href="/applications/lookup" className="btn btn--primary btn--md">
             신청 내역 확인하기
           </Link>
-          <Link href="/guardian" className="btn btn--quiet">
+          <Link href="/" className="btn btn--quiet">
             홈으로 돌아가기
           </Link>
         </div>
@@ -101,12 +101,12 @@ export function CompleteView() {
 
         <div className="center-screen__actions">
           <Link
-            href={`/guardian/applications/${encodeURIComponent(applicationNumber)}`}
+            href={`/applications/${encodeURIComponent(applicationNumber)}`}
             className="btn btn--primary btn--md"
           >
             신청 내역 확인하기
           </Link>
-          <Link href="/guardian" className="btn btn--quiet">
+          <Link href="/" className="btn btn--quiet">
             홈으로 돌아가기
           </Link>
         </div>

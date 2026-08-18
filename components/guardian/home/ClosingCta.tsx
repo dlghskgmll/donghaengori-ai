@@ -15,7 +15,7 @@ export function ClosingCta() {
           3분이면 충분해요. 나머지는 담당자가 함께합니다.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-          <Link href="/guardian/apply" className="btn btn--primary btn--lg" style={{ padding: "0 34px" }}>
+          <Link href="/apply" className="btn btn--primary btn--lg" style={{ padding: "0 34px" }}>
             병원동행 신청하기
           </Link>
           <a

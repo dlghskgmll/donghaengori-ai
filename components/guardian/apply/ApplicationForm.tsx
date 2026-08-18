@@ -62,7 +62,7 @@ export function ApplicationForm() {
       setErrors({});
       window.scrollTo(0, 0);
     } else {
-      router.push("/guardian");
+      router.push("/");
     }
   }
 
@@ -91,7 +91,7 @@ export function ApplicationForm() {
       // 방금 만든 신청은 같은 브라우저에서 번호를 다시 입력하지 않고 열 수 있도록
       // 세션 범위로만 기억한다(영속 저장소가 아니라 편의용 힌트다).
       rememberApplication(payload.application.applicationNumber, form.phone);
-      router.push(`/guardian/apply/complete?number=${encodeURIComponent(payload.application.applicationNumber)}`);
+      router.push(`/apply/complete?number=${encodeURIComponent(payload.application.applicationNumber)}`);
     } catch {
       setSubmitError("잠시 문제가 발생했어요. 조금 뒤 다시 시도해주세요.");
       setSubmitting(false);

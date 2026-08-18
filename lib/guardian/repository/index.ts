@@ -5,6 +5,7 @@
 // (가짜 영속성을 제품처럼 보이게 하지 않는다.)
 
 import { InMemoryApplicationRepository } from "./inMemoryApplicationRepository";
+import { TeamBackendApplicationRepository } from "./teamBackendApplicationRepository";
 import type { ApplicationRepositoryWithInfo } from "./applicationRepository";
 
 export class PersistenceNotConfiguredError extends Error {
@@ -31,8 +32,11 @@ function build(): ApplicationRepositoryWithInfo {
       }
       return new InMemoryApplicationRepository();
     }
-    // Phase B에서 추가할 지점:
-    //   case "team":     return new TeamBackendApplicationRepository({ baseUrl: ... });
+    case "team": {
+      // TEAM_AI_BASE_URL(기본 http://localhost:8000)로 Team FastAPI에 직접 붙는다.
+      return new TeamBackendApplicationRepository();
+    }
+    // Phase C에서 추가할 지점:
     //   case "postgres": return new PostgresApplicationRepository({ url: ... });
     default:
       throw new PersistenceNotConfiguredError(provider);

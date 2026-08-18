@@ -49,10 +49,10 @@ export function Hero() {
           동행고리AI가 신청 내용을 정리하고, 담당 사회복지사가 확인합니다.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 30, justifyContent: "center" }}>
-          <Link href="/guardian/apply" className="btn btn--primary btn--lg">
+          <Link href="/apply" className="btn btn--primary btn--lg">
             병원동행 신청하기
           </Link>
-          <Link href="/guardian/applications/lookup" className="btn btn--outline">
+          <Link href="/applications/lookup" className="btn btn--outline">
             신청 내용 확인
           </Link>
         </div>

@@ -243,7 +243,7 @@ export function AiPhoneSection() {
         <div style={{ marginTop: 34, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <span style={{ fontSize: 15, color: "var(--text-muted)" }}>직접 입력이 편하신가요?</span>
           <Link
-            href="/guardian/apply"
+            href="/apply"
             className="btn"
             style={{ minHeight: 48, background: "#fff", color: "var(--ink)", border: "1.5px solid #D5C8B2", padding: "0 22px", fontSize: 15, fontWeight: 700 }}
           >

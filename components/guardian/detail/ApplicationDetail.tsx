@@ -39,7 +39,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div style={{ minHeight: "100vh", background: "var(--cream)" }}>
       <div className="gd-topbar">
         <div className="gd-topbar__inner">
-          <Link href="/guardian" className="iconbtn" aria-label="홈으로">
+          <Link href="/" className="iconbtn" aria-label="홈으로">
             <ChevronLeftIcon />
           </Link>
           <span className="gd-topbar__title">신청 확인</span>
@@ -65,7 +65,7 @@ export function ApplicationDetail({ applicationNumber }: { applicationNumber: st
         return;
       }
       try {
-        const response = await fetch("/api/guardian/applications/lookup", {
+        const response = await fetch("/api/applications/lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ applicationNumber, guardianPhone: hint.phone }),
@@ -122,7 +122,7 @@ export function ApplicationDetail({ applicationNumber }: { applicationNumber: st
             type="button"
             className="btn btn--primary btn--md"
             style={{ marginTop: 28, padding: "0 28px" }}
-            onClick={() => router.push("/guardian/applications/lookup")}
+            onClick={() => router.push("/applications/lookup")}
           >
             신청 내역 확인하기
           </button>

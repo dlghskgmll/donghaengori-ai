@@ -17,7 +17,7 @@ export function SiteHeader() {
         className="wrap"
         style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}
       >
-        <Link href="/guardian" style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <Image src="/guardian/logo.png" alt="동행고리 심볼" width={30} height={34} style={{ objectFit: "contain" }} priority />
           <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em" }}>
             동행고리<span style={{ color: "var(--orange)" }}>AI</span>
@@ -26,7 +26,7 @@ export function SiteHeader() {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {/* 신청 확인 → 조회 화면. 임의의 상세로 바로 가지 않는다. */}
           <Link
-            href="/guardian/applications/lookup"
+            href="/applications/lookup"
             style={{
               minHeight: 44,
               display: "inline-flex",
@@ -40,7 +40,7 @@ export function SiteHeader() {
             신청 확인
           </Link>
           <Link
-            href="/guardian/apply"
+            href="/apply"
             className="btn btn--primary"
             style={{ minHeight: 40, height: 40, padding: "0 18px", fontSize: 14, fontWeight: 700, boxShadow: "none" }}
           >
