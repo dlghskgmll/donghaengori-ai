@@ -33,6 +33,23 @@ type LocalResolutionAction = IntakeFieldResolutionAction extends infer Action
     : never
   : never;
 
+/** 값이 없을 때 사용자에게 보여줄 문구. 내부 상태 용어를 그대로 노출하지 않는다. */
+const UNRESOLVED_TEXT = "아직 확인되지 않았어요";
+
+/** 필드별 입력 행동 라벨 — CTA만 읽어도 다음 행동을 알 수 있게 한다. */
+const ENTRY_ACTION_LABELS: Record<string, string> = {
+  date: "날짜 입력",
+  time: "시간 입력",
+  hospital: "병원 입력",
+  dept: "진료과 입력",
+  department: "진료과 입력",
+  target: "대상자 입력",
+};
+
+export function entryActionLabel(fieldKey: string): string {
+  return ENTRY_ACTION_LABELS[fieldKey] ?? "입력";
+}
+
 export function ResolvableFieldRow({
   requestId,
   field,
@@ -56,6 +73,8 @@ export function ResolvableFieldRow({
     acceptValue.trim().length > 0 && acceptValue !== "확인 필요";
   const actionable = field.editable && (inferred || needs || resolved !== null);
   const editing = draft.editValue !== null;
+  const unresolvedNow = needs && !resolved;
+  const missingValue = field.display === "확인 필요";
   const displayedValue = resolved?.value ?? field.display;
   const humanLabel =
     resolved?.status === "accepted"
@@ -79,17 +98,17 @@ export function ResolvableFieldRow({
   };
 
   return (
-    <div className="dc-field">
-      <span className="dc-field-label">{field.label}</span>
-      <div className="dc-field-body">
-        {editing ? (
-          <span className="dc-field-editor">
-            <label className="dc-field-edit-label" htmlFor={inputId}>
-              {field.label} 작업값
+    <div className={`dcw-row${unresolvedNow ? " is-unresolved" : ""}`}>
+      {editing ? (
+        <div className="dcw-row-main">
+          <span className="dcw-row-label">{field.label}</span>
+          <span className="dcw-row-editor">
+            <label className="dcw-visually-hidden" htmlFor={inputId}>
+              {field.label} 입력
             </label>
             <input
               id={inputId}
-              className="dc-field-input"
+              className="dcw-row-input"
               value={draft.editValue ?? ""}
               autoFocus
               onChange={(event) =>
@@ -99,126 +118,47 @@ export function ResolvableFieldRow({
                 if (event.key === "Escape") dispatch({ type: "cancelEdit" });
               }}
             />
-            <span className="dc-field-actions">
-              <button
-                type="button"
-                className="dc-field-action"
-                onClick={() => dispatch({ type: "cancelEdit" })}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                className="dc-field-action is-primary"
-                disabled={!draft.editValue?.trim()}
-                onClick={() => dispatch({ type: "applyEdit" })}
-              >
-                적용
-              </button>
-            </span>
+            <button
+              type="button"
+              className="dcw-action"
+              onClick={() => dispatch({ type: "cancelEdit" })}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="dcw-action is-primary"
+              disabled={!draft.editValue?.trim()}
+              onClick={() => dispatch({ type: "applyEdit" })}
+            >
+              저장
+            </button>
           </span>
-        ) : (
-          <>
-            <span className="dc-field-value-row">
+        </div>
+      ) : (
+        <>
+          <div className="dcw-row-main">
+            <span className="dcw-row-label">{field.label}</span>
+            <span className="dcw-row-value-wrap">
               <span
-                className={`dc-field-value${needs && !resolved ? " is-missing" : ""}`}
+                className={`dcw-row-value${unresolvedNow && missingValue ? " is-empty" : ""}`}
               >
-                {displayedValue}
+                {unresolvedNow && missingValue ? UNRESOLVED_TEXT : displayedValue}
               </span>
-
               {resolved ? (
-                <span className="dc-human-mark">{humanLabel}</span>
+                <span className="dcw-mark is-human">{humanLabel}</span>
               ) : inferred ? (
-                <span className="dc-inferred-mark">· AI가 추정</span>
-              ) : null}
-
-              {!resolved && needs ? (
-                <span className="dc-need-badge">확인 필요</span>
-              ) : null}
-
-              {hasEvidence && (!needs || resolved) ? (
-                <button
-                  type="button"
-                  className="dc-ev-toggle"
-                  aria-expanded={evOpen}
-                  onClick={() => setEvOpen((open) => !open)}
-                >
-                  {evOpen ? "근거 접기" : "근거 보기"}
-                </button>
+                <span className="dcw-mark">AI 추정</span>
+              ) : unresolvedNow && !missingValue ? (
+                <span className="dcw-mark is-attn">확인 전</span>
               ) : null}
             </span>
-
-            {resolved ? (
-              <span className="dc-field-original">
-                AI 초안: {field.display === "확인 필요" ? "값 없음" : field.display}
-                {" · "}
-                {inferred ? "추정" : "확인 필요"}
-              </span>
-            ) : null}
-
-            {field.sub && !resolved ? (
-              <span className="dc-field-sub">{field.sub}</span>
-            ) : null}
-
-            {hasEvidence && ((needs && !resolved) || evOpen) ? (
-              <span className="dc-evidence">
-                {field.evidence.map((item, index) => (
-                  <span key={`${field.key}-ev-${index}`}>{item}</span>
-                ))}
-              </span>
-            ) : null}
-
-            {!resolved && needs && field.confirmationQuestion ? (
-              <span className="dc-field-question">
-                <span className="dc-field-question-label">확인 질문</span>
-                <span>{field.confirmationQuestion}</span>
-              </span>
-            ) : null}
-
-            {!resolved && (inferred || needs) && hasMultipleCandidates ? (
-              <fieldset className="dc-field-candidates">
-                <legend>AI가 제시한 후보</legend>
-                {candidates.map((candidate) => (
-                  <label
-                    className="dc-field-candidate"
-                    key={`${field.key}-${candidate.value}`}
-                  >
-                    <input
-                      type="radio"
-                      name={candidateName}
-                      value={candidate.value}
-                      checked={draft.selectedCandidate === candidate.value}
-                      onChange={() =>
-                        dispatch({
-                          type: "candidateSelected",
-                          value: candidate.value,
-                        })
-                      }
-                    />
-                    <span>
-                      <span className="dc-field-candidate-value">
-                        {candidate.value}
-                      </span>
-                      {candidate.evidence.map((item, index) => (
-                        <span
-                          className="dc-field-candidate-evidence"
-                          key={`${candidate.value}-ev-${index}`}
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-            ) : null}
-
             {actionable ? (
-              <span className="dc-field-actions">
+              <span className="dcw-row-actions">
                 {!resolved && canAccept ? (
                   <button
                     type="button"
-                    className="dc-field-action is-primary"
+                    className="dcw-action is-primary"
                     disabled={hasMultipleCandidates && !selectedCandidate}
                     onClick={() =>
                       dispatch({ type: "accept", value: acceptValue })
@@ -227,18 +167,86 @@ export function ResolvableFieldRow({
                     이 값 사용
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  className="dc-field-action"
-                  onClick={beginEdit}
-                >
-                  {needs && !resolved ? "값 입력" : "수정"}
+                <button type="button" className="dcw-action" onClick={beginEdit}>
+                  {unresolvedNow && missingValue
+                    ? entryActionLabel(field.key)
+                    : "수정"}
                 </button>
               </span>
             ) : null}
-          </>
-        )}
-      </div>
+          </div>
+
+          {/* 보조 정보는 필요한 경우에만 행 하단 한 줄로 보여준다. */}
+          {!resolved && unresolvedNow && field.confirmationQuestion ? (
+            <p className="dcw-row-sub is-question">{field.confirmationQuestion}</p>
+          ) : null}
+          {field.sub && !resolved ? (
+            <p className="dcw-row-sub">{field.sub}</p>
+          ) : null}
+          {resolved ? (
+            <p className="dcw-row-sub">
+              AI 초안: {field.display === "확인 필요" ? "값 없음" : field.display}
+              {inferred ? " · 추정" : needs ? " · 확인 필요였음" : ""}
+            </p>
+          ) : null}
+
+          {!resolved && (inferred || needs) && hasMultipleCandidates ? (
+            <fieldset className="dcw-candidates">
+              <legend>AI가 제시한 후보</legend>
+              {candidates.map((candidate) => (
+                <label
+                  className="dcw-candidate"
+                  key={`${field.key}-${candidate.value}`}
+                >
+                  <input
+                    type="radio"
+                    name={candidateName}
+                    value={candidate.value}
+                    checked={draft.selectedCandidate === candidate.value}
+                    onChange={() =>
+                      dispatch({
+                        type: "candidateSelected",
+                        value: candidate.value,
+                      })
+                    }
+                  />
+                  <span>
+                    <span className="dcw-candidate-value">{candidate.value}</span>
+                    {candidate.evidence.map((item, index) => (
+                      <span
+                        className="dcw-candidate-evidence"
+                        key={`${candidate.value}-ev-${index}`}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
+
+          {hasEvidence ? (
+            <div className="dcw-row-evidence-wrap">
+              <button
+                type="button"
+                className="dcw-ev-toggle"
+                aria-expanded={evOpen}
+                onClick={() => setEvOpen((open) => !open)}
+              >
+                {evOpen ? "근거 접기" : "근거 보기"}
+              </button>
+              {evOpen ? (
+                <div className="dcw-evidence">
+                  {field.evidence.map((item, index) => (
+                    <span key={`${field.key}-ev-${index}`}>{item}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
