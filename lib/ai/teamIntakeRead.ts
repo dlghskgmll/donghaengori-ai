@@ -16,6 +16,9 @@ const TeamFieldSchema = z
     status: TeamStatus,
     evidence: z.array(z.string()).default([]),
     spoken: z.string().nullable().optional(),
+    // 사람이 통화로 확인했을 때만 백엔드가 채운다(verify_card_field).
+    // 대상자 배지가 "전화번호 일치"와 "사람이 확인함"을 가르는 근거다.
+    verified_by: z.string().nullable().optional(),
   })
   .loose();
 

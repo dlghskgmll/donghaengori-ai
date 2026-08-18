@@ -164,12 +164,24 @@ export function toSavedIntakeDetail(
     }
 
     if (key === "target") {
-      // 발신번호로 대상자를 확정하지 않는다 — 저장값이 무엇이든 확인 필요다.
+      // 발신번호로 대상자를 확정하지 않는다 — **AI가 채운 값은** 무엇이든
+      // 확인 필요다. 단, 사람이 verify 로 확인한 것까지 덮으면 안 된다 —
+      // 확인함을 눌러도 배지가 확인 필요로 남아, 서버 게이트는 풀렸는데
+      // 화면만 계속 막힌 것처럼 보였다.
+      //
+      // verified_by 는 verify_card_field 만 채우는 구조화 키다. 그 이전에
+      // 확인된 접수(키가 없던 시절)는 근거 문장의 고정 접두어로 가른다 —
+      // 이 접두어도 백엔드가 만든다(화면 라벨과 무관).
+      const humanVerified =
+        Boolean(teamField?.verified_by) ||
+        (teamField?.evidence ?? []).some((item) =>
+          item.startsWith("통화로 확인함"),
+        );
       return {
         key,
         label,
         value: card?.target?.trim() || detail.target?.trim() || null,
-        status: "NEEDS_CONFIRMATION",
+        status: humanVerified ? "CONFIRMED_BY_INPUT" : "NEEDS_CONFIRMATION",
         evidence: teamField?.evidence ?? [],
       };
     }
