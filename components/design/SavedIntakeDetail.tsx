@@ -12,7 +12,7 @@ import {
   ResolvableFieldRow,
   type ResolvableField,
 } from "./ResolvableFieldRow";
-import type { IntakeAuditState } from "@/lib/ui/intakeFinalization";
+import { isVerifiableField, type IntakeAuditState } from "@/lib/ui/intakeFinalization";
 import {
   SavedIntakeAuditSection,
   SavedIntakeFinalization,
@@ -212,6 +212,12 @@ export function SavedIntakeDetail({
                     field.key,
                   )}
                   onAction={onResolutionAction}
+                  onVerify={
+                    onVerify && isVerifiableField(field.key)
+                      ? (value) => onVerify(field.key, value)
+                      : undefined
+                  }
+                  verifyBusy={confirmBusy}
                   key={`${requestId}-${field.key}`}
                 />
               ))}
@@ -241,6 +247,12 @@ export function SavedIntakeDetail({
                     field.key,
                   )}
                   onAction={onResolutionAction}
+                  onVerify={
+                    onVerify && isVerifiableField(field.key)
+                      ? (value) => onVerify(field.key, value)
+                      : undefined
+                  }
+                  verifyBusy={confirmBusy}
                   key={`${requestId}-${field.key}`}
                 />
               ))}

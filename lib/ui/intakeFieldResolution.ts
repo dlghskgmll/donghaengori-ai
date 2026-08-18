@@ -65,6 +65,14 @@ export type IntakeFieldResolutionAction =
       type: "applyEdit";
       requestId: string;
       fieldKey: string;
+    }
+  | {
+      // 통화 확인(verify)이 서버에 반영됐다. 로컬 작업값은 역할이 끝났으므로
+      // 지운다 — 남겨 두면 서버가 '확인됨'으로 돌려준 값 옆에 "담당자가
+      // 수정함"이 계속 붙어, 어느 쪽이 기록인지 화면에서 헷갈린다.
+      type: "verified";
+      requestId: string;
+      fieldKey: string;
     };
 
 export function getIntakeFieldDraft(
@@ -134,6 +142,9 @@ export function intakeFieldResolutionReducer(
           selectedCandidate: current.selectedCandidate,
         };
       }
+
+      case "verified":
+        return EMPTY_FIELD_DRAFT;
 
       default:
         return current;

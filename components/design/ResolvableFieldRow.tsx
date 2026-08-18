@@ -25,6 +25,15 @@ interface ResolvableFieldRowProps {
   field: ResolvableField;
   draft: IntakeFieldDraft;
   onAction: (action: IntakeFieldResolutionAction) => void;
+  /**
+   * 통화로 확인한 값을 서버에 반영한다 — 게이트를 푸는 유일한 경로.
+   *
+   * 저장된 접수의 verify 가능한 항목에만 내려온다(미리보기·검증 불가 항목은
+   * undefined). '적용'과 버튼을 나눈 이유는 감사 구분이다: 적용은 화면 작업값,
+   * 이 버튼은 "통화로 확인했다"는 진술이라 감사 로그에 남는다.
+   */
+  onVerify?: (value: string) => void;
+  verifyBusy?: boolean;
 }
 
 type LocalResolutionAction = IntakeFieldResolutionAction extends infer Action
@@ -38,6 +47,8 @@ export function ResolvableFieldRow({
   field,
   draft,
   onAction,
+  onVerify,
+  verifyBusy,
 }: ResolvableFieldRowProps) {
   const [evOpen, setEvOpen] = useState(false);
   const inputId = useId();
@@ -115,6 +126,19 @@ export function ResolvableFieldRow({
               >
                 적용
               </button>
+              {onVerify ? (
+                <button
+                  type="button"
+                  className="dc-field-action is-verify"
+                  disabled={!draft.editValue?.trim() || verifyBusy}
+                  onClick={() => {
+                    const value = draft.editValue?.trim();
+                    if (value) onVerify(value);
+                  }}
+                >
+                  {verifyBusy ? "반영 중…" : "통화로 확인함"}
+                </button>
+              ) : null}
             </span>
           </span>
         ) : (
@@ -234,6 +258,16 @@ export function ResolvableFieldRow({
                 >
                   {needs && !resolved ? "값 입력" : "수정"}
                 </button>
+                {onVerify && resolved ? (
+                  <button
+                    type="button"
+                    className="dc-field-action is-verify"
+                    disabled={verifyBusy}
+                    onClick={() => onVerify(resolved.value)}
+                  >
+                    {verifyBusy ? "반영 중…" : "이 값 통화로 확인함"}
+                  </button>
+                ) : null}
               </span>
             ) : null}
           </>
