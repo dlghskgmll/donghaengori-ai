@@ -65,7 +65,10 @@ export function ApplicationDetail({ applicationNumber }: { applicationNumber: st
         return;
       }
       try {
-        const response = await fetch("/api/applications/lookup", {
+        // Route Handler 는 /api/guardian/ 아래에 있다. /guardian/ 을 빼먹으면
+        // nginx 의 일반 /api/ 규칙에 걸려 FastAPI 로 넘어가고, 거기엔 이 라우트가
+        // 없어 404 가 난다 — 신청 생성은 되는데 조회만 안 되던 원인이다.
+        const response = await fetch("/api/guardian/applications/lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ applicationNumber, guardianPhone: hint.phone }),
