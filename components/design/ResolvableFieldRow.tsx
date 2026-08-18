@@ -29,8 +29,8 @@ interface ResolvableFieldRowProps {
    * 통화로 확인한 값을 서버에 반영한다 — 게이트를 푸는 유일한 경로.
    *
    * 저장된 접수의 verify 가능한 항목에만 내려온다(미리보기·검증 불가 항목은
-   * undefined). '적용'과 버튼을 나눈 이유는 감사 구분이다: 적용은 화면 작업값,
-   * 이 버튼은 "통화로 확인했다"는 진술이라 감사 로그에 남는다.
+   * undefined). 이 프롭이 있으면 로컬 '적용'은 사라지고 [확인함] 하나가
+   * 반영까지 한다 — "통화로 확인했다"는 진술이라 감사 로그에 남는다.
    */
   onVerify?: (value: string) => void;
   verifyBusy?: boolean;
@@ -118,15 +118,10 @@ export function ResolvableFieldRow({
               >
                 취소
               </button>
-              <button
-                type="button"
-                className="dc-field-action is-primary"
-                disabled={!draft.editValue?.trim()}
-                onClick={() => dispatch({ type: "applyEdit" })}
-              >
-                적용
-              </button>
               {onVerify ? (
+                // 버튼 하나로 끝낸다 — 적용(화면 작업값)과 확인(서버 반영)을
+                // 나눠 두니 같은 값을 두 번 다루게 됐다. 저장된 접수의
+                // verify 가능한 항목에서는 확인함이 곧 반영이다.
                 <button
                   type="button"
                   className="dc-field-action is-verify"
@@ -138,7 +133,16 @@ export function ResolvableFieldRow({
                 >
                   {verifyBusy ? "반영 중…" : "확인함"}
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  className="dc-field-action is-primary"
+                  disabled={!draft.editValue?.trim()}
+                  onClick={() => dispatch({ type: "applyEdit" })}
+                >
+                  적용
+                </button>
+              )}
             </span>
           </span>
         ) : (
@@ -242,13 +246,22 @@ export function ResolvableFieldRow({
                 {!resolved && canAccept ? (
                   <button
                     type="button"
-                    className="dc-field-action is-primary"
-                    disabled={hasMultipleCandidates && !selectedCandidate}
+                    className={`dc-field-action ${onVerify ? "is-verify" : "is-primary"}`}
+                    disabled={
+                      (hasMultipleCandidates && !selectedCandidate) ||
+                      (onVerify ? verifyBusy : false)
+                    }
                     onClick={() =>
-                      dispatch({ type: "accept", value: acceptValue })
+                      onVerify
+                        ? onVerify(acceptValue)
+                        : dispatch({ type: "accept", value: acceptValue })
                     }
                   >
-                    이 값 사용
+                    {onVerify
+                      ? verifyBusy
+                        ? "반영 중…"
+                        : "이 값 확인함"
+                      : "이 값 사용"}
                   </button>
                 ) : null}
                 <button
