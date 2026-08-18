@@ -2271,6 +2271,20 @@ button:disabled {
   background: #fff7ed;
 }
 
+/* '통화로 확인함' — 서버 게이트를 푸는 확정적 행동이라 채워진 버튼으로
+   구분한다. '적용'(is-primary, 외곽선)은 화면 작업값이고 이건 감사 기록이다. */
+.dc-field-action.is-verify {
+  border-color: #d97706;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.dc-field-action.is-verify:hover:not(:disabled) {
+  border-color: #9a3412;
+  background: #ffedd5;
+}
+
 .dc-field-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;

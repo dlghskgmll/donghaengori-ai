@@ -12,7 +12,7 @@ import {
   ResolvableFieldRow,
   type ResolvableField,
 } from "./ResolvableFieldRow";
-import type { IntakeAuditState } from "@/lib/ui/intakeFinalization";
+import { isVerifiableField, type IntakeAuditState } from "@/lib/ui/intakeFinalization";
 import {
   SavedIntakeAuditSection,
   SavedIntakeFinalization,
@@ -149,6 +149,14 @@ export function SavedIntakeDetail({
       field={field}
       draft={getIntakeFieldDraft(resolutions, requestId, field.key)}
       onAction={onResolutionAction}
+      // 서버가 받는 항목에만 확인 버튼을 준다 — 받지 않는 항목에 그려 두면
+      // 눌러도 422만 나고 왜 안 되는지 알 방법이 없다.
+      onVerify={
+        onVerify && isVerifiableField(field.key)
+          ? (value) => onVerify(field.key, value)
+          : undefined
+      }
+      verifyBusy={confirmBusy}
       key={`${requestId}-${field.key}`}
     />
   );
@@ -249,7 +257,6 @@ export function SavedIntakeDetail({
         confirmed={detail.confirmed}
         gate={detail.gate}
         onConfirm={onConfirm}
-        onVerify={onVerify}
         busy={confirmBusy}
         error={confirmError}
       />

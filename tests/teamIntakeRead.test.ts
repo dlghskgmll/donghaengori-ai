@@ -319,10 +319,42 @@ describe("saved intake safety", () => {
     ).toMatchObject({ status: "CONFIRMED_BY_INPUT", downgraded: false });
   });
 
-  it("대상자는 저장값이 확인됨이어도 항상 확인 필요로 표시한다", () => {
+  it("대상자는 AI 저장값이 확인됨이어도 확인 필요로 표시한다", () => {
+    // 발신번호 일치만으로 확인됨이 된 값 — 사람이 확인한 게 아니다.
     const view = toSavedIntakeDetail(teamDetail() as never);
     const target = view.fields.find((field) => field.key === "target");
     expect(target?.status).toBe("NEEDS_CONFIRMATION");
+  });
+
+  it("사람이 verify 로 확인한 대상자는 확인됨으로 표시한다", () => {
+    // 이 구분이 무너지면 어느 쪽으로든 사고다 — 하드코딩으로 항상 확인
+    // 필요를 띄우면 확인함을 눌러도 화면이 계속 막힌 것처럼 보이고(실제로
+    // 겪었다), 반대로 저장값만 믿으면 발신번호 일치가 확인으로 둔갑한다.
+    const detail = teamDetail() as { card: { fields: Record<string, unknown> } };
+    detail.card.fields.target = {
+      label: "대상자",
+      value: "박순자",
+      status: "확인됨",
+      evidence: ["통화로 확인함 — 테스트 사회복지사"],
+      verified_by: "테스트 사회복지사",
+    };
+    const view = toSavedIntakeDetail(detail as never);
+    const target = view.fields.find((field) => field.key === "target");
+    expect(target?.status).toBe("CONFIRMED_BY_INPUT");
+  });
+
+  it("verified_by 없이 옛 근거 문장만 있어도 확인됨으로 표시한다", () => {
+    // 구조화 키가 생기기 전에 확인된 접수 — 근거 접두어로 가른다.
+    const detail = teamDetail() as { card: { fields: Record<string, unknown> } };
+    detail.card.fields.target = {
+      label: "대상자",
+      value: "박순자",
+      status: "확인됨",
+      evidence: ["통화로 확인함 — 테스트 사회복지사"],
+    };
+    const view = toSavedIntakeDetail(detail as never);
+    const target = view.fields.find((field) => field.key === "target");
+    expect(target?.status).toBe("CONFIRMED_BY_INPUT");
   });
 
   it("긴급 접수는 목록·상세 모두 urgent로 표시된다", () => {

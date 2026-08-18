@@ -446,6 +446,13 @@ export function IntakeWorkspace() {
           field as "target" | "hospital" | "dept" | "date" | "time",
           value,
         );
+        // 서버가 '확인됨'으로 받아줬으니 로컬 작업값은 역할이 끝났다. 지우지
+        // 않으면 새로 읽어온 확인된 값 옆에 "담당자가 수정함"이 계속 붙는다.
+        resolveField({
+          type: "verified",
+          requestId: `saved-${savedId}`,
+          fieldKey: field,
+        });
         await loadDetail(savedId);
         setReadRefreshNonce((n) => n + 1);
       } catch (error) {

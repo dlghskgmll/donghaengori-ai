@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { SavedIntakeGate, SavedIntakeGateBlocker } from "@/lib/ai/savedIntakeView";
+import type { SavedIntakeGate } from "@/lib/ai/savedIntakeView";
 import {
   intakeAuditTone,
   intakeFinalizationMode,
-  isVerifiableField,
   type IntakeAuditState,
 } from "@/lib/ui/intakeFinalization";
 
@@ -72,55 +71,6 @@ export function SavedIntakeAuditSection({
 }
 
 /**
- * blocker 하나를 푸는 입력.
- *
- * **이 버튼은 "통화로 확인했다"는 뜻이다.** 위 항목 목록에서 값을 고치는 것과
- * 다르다 — 그 구분이 무너지면 사고가 났을 때 누가 실제로 확인했는지 답할 수
- * 없다. 그래서 라벨을 '통화로 확인함'으로 두고, 확인 전화를 마친 뒤 쓰라고 적는다.
- * 서버가 받지 않는 항목(isVerifiableField 밖)은 입력을 그리지 않는다 — 그려 두면
- * 눌러도 422만 나고 복지사는 왜 안 되는지 알 수 없다.
- */
-function VerifyBlockerRow({
-  blocker,
-  busy,
-  onVerify,
-}: {
-  blocker: SavedIntakeGateBlocker;
-  busy: boolean;
-  onVerify: (field: string, value: string) => void;
-}) {
-  const [value, setValue] = useState(blocker.value ?? blocker.spoken ?? "");
-  const ready = value.trim().length > 0 && !busy;
-  return (
-    <div className="dcw-verify-row">
-      <span className="dcw-verify-label">{blocker.label}</span>
-      <span className="dcw-verify-input">
-        <input
-          type="text"
-          className="dcw-row-input"
-          value={value}
-          disabled={busy}
-          aria-label={`${blocker.label} 확인 결과`}
-          placeholder="통화로 확인한 값"
-          onChange={(event) => setValue(event.target.value)}
-        />
-        <button
-          type="button"
-          className="dcw-action is-primary"
-          disabled={!ready}
-          onClick={ready ? () => onVerify(blocker.field, value.trim()) : undefined}
-        >
-          {busy ? "반영 중…" : "통화로 확인함"}
-        </button>
-      </span>
-      {blocker.question ? (
-        <p className="dcw-verify-question">{blocker.question}</p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
  * 미확인 확정 사유 — **왜 넘어가는지를 받는다.**
  * 사고가 났을 때 "연락이 닿지 않았다"와 "물어볼 필요 없다고 봤다"는 책임이
  * 전혀 다른데, 기록에 '미확인 확정'만 남으면 그 둘을 구분할 수 없다.
@@ -136,15 +86,16 @@ const ACK_REASONS = [
 /**
  * 작업공간 하단 고정 확정 영역.
  *
- * 확정 가능 여부는 server gate가 정한다. 게이트를 푸는 유일한 경로는 verify이며
- * (onVerify), 그 수단이 화면에 없으면 걸린 접수를 영영 확정할 수 없다.
- * 확정은 실제 API로 전송된다(onConfirm).
+ * 역할을 나눈다 — **항목 확인/수정은 각 필드 행이**, 전체 접수 확정은 이 바가
+ * 담당한다. 같은 확인 동작을 두 곳에 두면 사회복지사가 어디서 눌러야 하는지
+ * 판단해야 하고, 감사 로그상 같은 행동이 두 경로로 들어온다.
+ *
+ * 확정 가능 여부는 항상 server gate가 정한다(local 작업값이 아니다).
  */
 export function SavedIntakeFinalization({
   confirmed,
   gate,
   onConfirm,
-  onVerify,
   busy = false,
   error = null,
 }: {
@@ -152,8 +103,6 @@ export function SavedIntakeFinalization({
   gate: SavedIntakeGate | null;
   /** 확정을 실제로 보낸다. 없으면 준비 중 상태로 비활성 표시한다. */
   onConfirm?: (acknowledge: boolean, reason: string | null) => void;
-  /** blocker를 통화 확인으로 푼다. 없으면 확인 입력을 그리지 않는다. */
-  onVerify?: (field: string, value: string) => void;
   busy?: boolean;
   error?: string | null;
 }) {
@@ -161,7 +110,6 @@ export function SavedIntakeFinalization({
   const connected = typeof onConfirm === "function";
   const [ackOpen, setAckOpen] = useState(false);
   const [ackReason, setAckReason] = useState("");
-  const [verifyOpen, setVerifyOpen] = useState(false);
 
   if (mode === "confirmed") {
     return (
@@ -171,56 +119,21 @@ export function SavedIntakeFinalization({
     );
   }
 
-  const blockers = gate?.blockers ?? [];
-  const verifiable = onVerify ? blockers.filter((b) => isVerifiableField(b.field)) : [];
-  const blockerCount = blockers.length;
+  const blockerCount = gate?.blockers.length ?? 0;
   const helper =
     mode === "gate-unavailable"
       ? "확정 조건을 불러오지 못해 지금은 접수할 수 없어요."
       : mode === "regular"
         ? "필수 정보를 모두 확인했어요."
-        : mode === "hard-block"
-          ? "남은 정보를 통화로 확인해야 접수할 수 있어요."
-          : blockerCount > 0
-            ? `필수 정보 ${blockerCount}개를 확인하면 접수할 수 있어요.`
-            : "필수 정보를 모두 확인하면 접수할 수 있어요.";
+        : blockerCount > 0
+          ? `필수 정보 ${blockerCount}개가 아직 확인되지 않았어요.`
+          : "필수 정보를 모두 확인하면 접수할 수 있어요.";
   const note = !connected
     ? "접수 확정 기능은 준비 중이에요."
     : "확정은 되돌릴 수 없어요. 누른 사람과 시각이 활동 기록에 남아요.";
 
   return (
     <div className="dcw-cta-stack">
-      {/* 게이트를 푸는 유일한 경로 — 통화로 확인한 값만 서버가 받는다. */}
-      {verifyOpen && verifiable.length > 0 ? (
-        <div className="dcw-verify" role="group" aria-label="통화로 확인">
-          <div className="dcw-verify-head">
-            <span className="dcw-verify-title">통화로 확인한 값 넣기</span>
-            <button
-              type="button"
-              className="dcw-action"
-              disabled={busy}
-              onClick={() => setVerifyOpen(false)}
-            >
-              닫기
-            </button>
-          </div>
-          <div className="dcw-verify-rows">
-            {verifiable.map((blocker) => (
-              <VerifyBlockerRow
-                key={`${blocker.field}-${blocker.label}`}
-                blocker={blocker}
-                busy={busy}
-                onVerify={onVerify!}
-              />
-            ))}
-          </div>
-          <p className="dcw-verify-note">
-            확인 전화를 마친 뒤 들은 값을 넣으세요. 위 항목에서 고친 값이 아니라{" "}
-            <strong>통화로 확인한 값</strong>만 확정을 열어줍니다.
-          </p>
-        </div>
-      ) : null}
-
       {/* 미확인 확정은 예외 행동 — 사유를 고른 사람만 진행할 수 있다. */}
       {ackOpen && mode === "soft-block" ? (
         <div className="dcw-ack" role="group" aria-label="확인 없이 접수">
@@ -279,16 +192,6 @@ export function SavedIntakeFinalization({
           )}
         </div>
         <div className="dcw-cta-actions">
-          {verifiable.length > 0 && !verifyOpen ? (
-            <button
-              type="button"
-              className="dcw-btn-ghost"
-              disabled={busy}
-              onClick={() => setVerifyOpen(true)}
-            >
-              통화로 확인 입력
-            </button>
-          ) : null}
           {mode === "soft-block" && !ackOpen ? (
             <button
               type="button"
