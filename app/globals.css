@@ -3847,6 +3847,42 @@ button:disabled {
   font-size: 12.5px;
 }
 
+/* 미확인 확정의 사유 선택.
+   .dc-final-action.is-warning 카드 안에 들어가므로 카드가 배경·테두리를
+   담당하고, 여기서는 안쪽 배치만 잡는다. 위의 `.dc-final-action > div` 가
+   먼저 걸리는데 그건 strong+span 텍스트 블록용이라 gap 이 3px 로 좁다 —
+   폼 컨트롤에는 안 맞아서 다시 잡는다. */
+.dc-final-ack {
+  width: 100%;
+  gap: 6px;
+}
+
+.dc-final-ack-label {
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 저장소에 select 스타일이 따로 없어서 여기서 정한다. 높이·모서리·글자 크기를
+   같은 카드의 버튼(34px / 8px / 12.5px)에 맞춰 둘이 같은 줄에 있어도 어긋나
+   보이지 않게 한다. */
+.dc-final-ack select {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  background: #fff;
+  color: #44403c;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.dc-final-ack select:disabled {
+  background: #fafaf9;
+  color: #a8a29e;
+}
+
 .dc-btn-warning {
   display: inline-flex;
   align-items: center;
