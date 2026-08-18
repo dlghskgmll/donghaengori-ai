@@ -52,9 +52,13 @@ export function AlertIcon({ size = 28 }: IconProps) {
   );
 }
 
+// marginInline:auto 가 필요한 이유는 Tailwind preflight 다 — svg 를 display:block
+// 으로 만들기 때문에, 감싼 쪽의 text-align:center 로는 가운데로 안 온다(블록이라
+// 왼쪽에 붙는다). TrustSection 에서 아이콘만 왼쪽에 떨어져 보이던 원인이다.
+// 다른 아이콘들은 flex 컨테이너 안이라 같은 문제가 없다.
 export function ShieldCheckIcon({ size = 44 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke="#F94704" strokeWidth={1.8} aria-hidden="true" style={{ marginBottom: 16 }}>
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base} stroke="#F94704" strokeWidth={1.8} aria-hidden="true" style={{ marginBottom: 16, marginInline: "auto" }}>
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       <path d="M9 12l2 2 4-4" />
     </svg>
