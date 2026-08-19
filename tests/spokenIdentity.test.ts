@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { toSavedIntakeDetail } from "../lib/ai/savedIntakeView";
 import {
   acceptLabelFor,
+  isNewRequestType,
   isReadOnlyField,
   verifyFieldFor,
 } from "../lib/ui/intakeFinalization";
@@ -165,5 +166,77 @@ describe("외출 전 참고", () => {
       card: { raw_utterance: 기본.raw_utterance },
     } as never);
     expect(view.outingChecklist).toEqual([]);
+  });
+});
+
+// ── 새로운 유형의 요청 ────────────────────────────────────
+//
+// "허리가 아픈데 우리 집 주변에 어떤 병원이 있는지 모르겠어" 같은 말은
+// 기존 흐름(이력 → 병원 후보 → 확정)이 감당하지 못한다. 서버는 병원·진료과를
+// **만들지 않고** 조건만 구조화해 넘긴다.
+//
+// 화면이 이걸 모르면 병원 빈 칸이 "AI가 못 찾았네" 로 읽히고, 복지사가
+// 직접 채워 넣는다 — 지어내지 않으려고 비운 자리가 지어낸 값으로 채워진다.
+
+describe("새로운 유형의 요청", () => {
+  it("기존재방문과 null 은 평소와 같다", () => {
+    expect(isNewRequestType("기존재방문")).toBe(false);
+    expect(isNewRequestType(null)).toBe(false);
+    expect(isNewRequestType(undefined)).toBe(false);
+    expect(isNewRequestType("  ")).toBe(false);
+  });
+
+  it("새 유형은 물론, 모르는 값도 새 유형으로 본다", () => {
+    for (const v of ["신규병원탐색", "진료과기반탐색", "돌봄인력요청", "기타불분명"]) {
+      expect(isNewRequestType(v)).toBe(true);
+    }
+    // 서버가 유형을 늘렸는데 화면이 조용히 평소처럼 그리면 안 된다.
+    expect(isNewRequestType("나중에생길유형")).toBe(true);
+  });
+
+  it("요청 칸을 항목으로 싣되 확인 버튼은 주지 않는다", () => {
+    const view = toSavedIntakeDetail({
+      id: 3,
+      target: "박순자",
+      channel: "전화",
+      status: "임시 접수",
+      created_at: "2026-08-20 10:00",
+      confirmed: 0,
+      raw_utterance: "허리가 아픈데 우리 집 주변에 어떤 병원이 있는지를 모르겠어",
+      card: {
+        raw_utterance: "허리가 아픈데 우리 집 주변에 어떤 병원이 있는지를 모르겠어",
+        request_type: "신규병원탐색",
+        hospital: null,
+        fields: {
+          request: {
+            label: "요청 내용",
+            value: "신규병원탐색 · 위치조건 우리 집 주변 · 사유 허리",
+            status: "확인 필요" as const,
+            evidence: ["AI는 이 요청의 병원·진료과·인력 정보를 만들지 않습니다"],
+          },
+        },
+      },
+    } as never);
+
+    expect(view.requestType).toBe("신규병원탐색");
+    const req = view.fields.find((f) => f.key === "request");
+    expect(req?.value).toContain("신규병원탐색");
+    // 서버 verify 가 받지 않는다 — 눌러도 422 만 난다.
+    expect(verifyFieldFor("request")).toBeNull();
+    expect(isReadOnlyField("request")).toBe(true);
+  });
+
+  it("평소 접수에는 요청 칸을 만들지 않는다", () => {
+    const view = toSavedIntakeDetail({
+      id: 4,
+      target: "박순자",
+      channel: "전화",
+      status: "임시 접수",
+      created_at: "2026-08-20 10:00",
+      confirmed: 0,
+      raw_utterance: "모레 정형외과 가야겄어",
+      card: { raw_utterance: "모레 정형외과 가야겄어", request_type: "기존재방문" },
+    } as never);
+    expect(view.fields.some((f) => f.key === "request")).toBe(false);
   });
 });

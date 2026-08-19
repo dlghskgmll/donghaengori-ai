@@ -6001,3 +6001,16 @@ button:disabled {
   left: 2px;
   color: #a8a29e;
 }
+
+/* 새로운 유형의 요청 — 복지사가 직접 응대해야 하는 접수.
+   경고가 아니라 안내다. 접수가 잘못된 게 아니라 AI가 만들지 않은 것뿐이다. */
+.dcw-head-new {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffdf5;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #92400e;
+}

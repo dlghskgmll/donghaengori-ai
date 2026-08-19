@@ -119,7 +119,23 @@ export function verifyFieldFor(key: string): VerifiableField | null {
  * 그대로다. '말한 주소' 는 카드에 채울 칸이 없어 여기 해당한다.
  */
 export function isReadOnlyField(key: string): boolean {
-  return key === "spoken_region";
+  // '요청 내용' 은 서버 verify 가 받지 않는다. 사회복지사가 직접 통화해
+  // 무엇이 필요한지 확인하고, 그 결과를 병원·날짜 칸에 적는 것이 이 유형의
+  // 처리다 — 요청 칸 자체를 '확인함' 으로 눌러 없앨 것이 아니다.
+  return key === "spoken_region" || key === "request";
+}
+
+/**
+ * 기존 접수 흐름이 감당하지 못하는 요청인가.
+ *
+ * '기존재방문' 과 null 은 평소와 같다 — 서버가 그렇게 계약했다
+ * (docs/FRONTEND.md). 모르는 값이 오면 새 유형으로 본다: 서버가 유형을
+ * 늘렸는데 화면이 조용히 평소처럼 그리면, 병원이 빈 카드를 복지사가
+ * "AI가 못 찾았네" 로 읽고 직접 채워 넣는다.
+ */
+export function isNewRequestType(value: string | null | undefined): boolean {
+  const v = (value ?? "").trim();
+  return v !== "" && v !== "기존재방문";
 }
 
 /** 확인 버튼 문구. 다른 항목을 채우는 줄은 무엇이 되는지 적는다. */
