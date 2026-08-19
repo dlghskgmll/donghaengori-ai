@@ -150,7 +150,11 @@ export function SavedIntakeDetail({
       !isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
   ).length;
 
-  const ELDER_KEYS = new Set(["target", "birth"]);
+  // 말한 성함·주소는 '누구인가' 에 속한다 — 방문 정보가 아니라 어르신 쪽에
+  // 붙어야 복지사가 대상자 확인을 한자리에서 한다.
+  const ELDER_KEYS = new Set([
+    "target", "birth", "spoken_name", "spoken_region",
+  ]);
   const visitFields = fields.filter((field) => !ELDER_KEYS.has(field.key));
   // 대상자와 생년월일은 둘 다 어르신 본인 정보라 같은 묶음으로 보여준다.
   const elderFields = fields.filter((field) => ELDER_KEYS.has(field.key));
