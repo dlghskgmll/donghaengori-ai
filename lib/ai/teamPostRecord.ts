@@ -31,9 +31,17 @@ export const TeamPostRecordSchema = z
   })
   .loose();
 
+/**
+ * phone 은 보내지 않아도 된다 — 서버가 접수에서 가져온다.
+ *
+ * 필수로 두었을 때 직원 화면에서는 사후기록을 아예 만들 수 없었다. 목록과
+ * 상세는 연락처를 마스킹해서 내려주므로(phone_masked) 원본이 브라우저에
+ * 없고, 그걸 받아오게 만드는 것은 사후기록을 쓰겠다고 개인정보를 한 번 더
+ * 꺼내는 일이다. 서버가 intake_id 로 찾는 편이 안전하고 짧다.
+ */
 export const TeamPostRecordCreateSchema = z.object({
   intake_id: z.number().int().nonnegative(),
-  phone: z.string().min(1),
+  phone: z.string().min(1).optional(),
   memo: z.string().min(1),
   dept: z.string().nullable().optional(),
   target: z.string().nullable().optional(),

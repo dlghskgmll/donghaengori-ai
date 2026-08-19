@@ -1,6 +1,7 @@
 "use client";
 
 import type { SavedIntakeDetailView, SavedIntakeField } from "@/lib/ai/savedIntakeView";
+import type { TeamPostDraft } from "@/lib/ai/teamPostRecord";
 import {
   findFieldConfirmationQuestion,
   getIntakeFieldDraft,
@@ -12,10 +13,15 @@ import {
   ResolvableFieldRow,
   type ResolvableField,
 } from "./ResolvableFieldRow";
-import { isVerifiableField, type IntakeAuditState } from "@/lib/ui/intakeFinalization";
+import {
+  isAccompanimentComplete,
+  isVerifiableField,
+  type IntakeAuditState,
+} from "@/lib/ui/intakeFinalization";
 import {
   SavedIntakeAuditSection,
   SavedIntakeFinalization,
+  SavedIntakePostRecord,
 } from "./SavedIntakeReviewShell";
 import { UrgentIntakeDetail } from "./UrgentIntakeDetail";
 
@@ -34,6 +40,8 @@ interface SavedIntakeDetailProps {
   /** blocker 하나를 통화로 확인해 게이트를 푼다. */
   onVerify?: (field: string, value: string) => void;
   onComplete?: () => void;
+  /** 다녀온 이야기로 기록 초안을 만든다. 완료된 접수에서만 내려온다. */
+  onWriteRecord?: (memo: string) => Promise<TeamPostDraft>;
   confirmBusy?: boolean;
   confirmError?: string | null;
 }
@@ -78,6 +86,7 @@ export function SavedIntakeDetail({
   onConfirm,
   onVerify,
   onComplete,
+  onWriteRecord,
   confirmBusy,
   confirmError,
 }: SavedIntakeDetailProps) {
@@ -118,6 +127,7 @@ export function SavedIntakeDetail({
     );
   }
 
+  const completed = isAccompanimentComplete(detail.status);
   const fields = detail.fields.map((field) =>
     toResolvableField(field, detail.confirmQuestions, !detail.confirmed),
   );
@@ -251,12 +261,19 @@ export function SavedIntakeDetail({
             </section>
           ) : null}
 
+          {/* 다녀온 뒤에야 적을 것이 생긴다. 그 전에 칸을 띄워 두면
+              가지도 않은 동행의 기록을 쓰게 된다. */}
+          {completed && onWriteRecord ? (
+            <SavedIntakePostRecord onCreate={onWriteRecord} />
+          ) : null}
+
           <SavedIntakeAuditSection state={auditState} onRetry={onAuditRetry} />
         </div>
       </div>
 
       <SavedIntakeFinalization
         confirmed={detail.confirmed}
+        completed={completed}
         gate={detail.gate}
         onConfirm={onConfirm}
         onComplete={onComplete}

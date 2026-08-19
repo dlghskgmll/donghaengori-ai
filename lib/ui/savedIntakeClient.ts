@@ -2,6 +2,10 @@ import type {
   SavedIntakeDetailView,
   SavedIntakeSummary,
 } from "@/lib/ai/savedIntakeView";
+import {
+  TeamPostRecordCreateResponseSchema,
+  type TeamPostRecordCreateResponse,
+} from "@/lib/ai/teamPostRecord";
 import { clearTeamSession, readTeamSession } from "./teamSession";
 
 // 저장된 접수 read 경로의 브라우저 경계.
@@ -245,6 +249,33 @@ export async function completeSavedIntake(
     "동행 완료를 반영하지 못했습니다.",
     options,
   );
+}
+
+/**
+ * 다녀온 이야기를 적으면 기록 초안이 나온다.
+ *
+ * 연락처를 보내지 않는다. 서버가 접수에서 찾는다 — 화면은 마스킹된 번호만
+ * 들고 있고, 기록을 쓰겠다고 원본을 다시 꺼낼 이유가 없다.
+ *
+ * 초안은 항상 '검토 필요' 로 들어간다. 여기서 만들어지는 것은 초안일 뿐,
+ * 승인은 사후기록 화면에서 사람이 한다.
+ */
+export async function createSavedIntakePostRecord(
+  savedId: number,
+  memo: string,
+  options: Omit<SavedIntakeRequestOptions, "signal"> = {},
+): Promise<TeamPostRecordCreateResponse> {
+  const payload = await authorizedPost(
+    "/api/v1/post-records",
+    { intake_id: savedId, memo },
+    "사후기록 초안을 만들지 못했습니다.",
+    options,
+  );
+  const parsed = TeamPostRecordCreateResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new SavedIntakeReadError(502, "사후기록 초안을 해석하지 못했습니다.");
+  }
+  return parsed.data;
 }
 
 /**

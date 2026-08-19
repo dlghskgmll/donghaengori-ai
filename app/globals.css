@@ -5923,3 +5923,52 @@ button:disabled {
     display: none;
   }
 }
+
+/* 다녀온 기록 — 사후기록 초안을 만드는 자리.
+   .dcw-rows 는 행끼리 테두리로 나뉘는 목록이라 여기에 맞지 않는다. */
+.dcw-post {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+
+/* 차 안에서 두어 문장 적는 칸이다. 상세 화면의 긴 입력창(168px)만큼
+   자리를 차지하면 확정 바가 화면 밖으로 밀린다. */
+.dcw-post-memo {
+  min-height: 96px;
+  font-size: 14.5px;
+}
+
+.dcw-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+}
+
+.dcw-draft-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.dcw-draft-row dt {
+  flex: none;
+  width: 76px;
+  font-size: 13px;
+  color: #78716c;
+}
+
+.dcw-draft-row dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: #1f1d1a;
+}

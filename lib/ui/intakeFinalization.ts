@@ -53,6 +53,19 @@ export function intakeAuditTone(action: string): "normal" | "warning" {
   return action === "미확인 확정" ? "warning" : "normal";
 }
 
+/**
+ * 서버가 동행을 다녀온 접수에 붙이는 상태값(core/db.complete_accompaniment).
+ *
+ * confirmed 플래그는 완료 뒤에도 1로 남는다 — 확정을 되돌리는 것이 아니라
+ * 그 다음 단계로 간 것이기 때문이다. 그래서 '다녀왔는지' 는 status 로만
+ * 갈린다.
+ */
+export const ACCOMPANIMENT_COMPLETE = "동행 완료";
+
+export function isAccompanimentComplete(status: string | null): boolean {
+  return status?.trim() === ACCOMPANIMENT_COMPLETE;
+}
+
 export function intakeFinalizationMode(
   confirmed: boolean,
   gate: SavedIntakeGate | null,

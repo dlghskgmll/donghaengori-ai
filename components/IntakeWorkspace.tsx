@@ -29,6 +29,7 @@ import {
 } from "@/lib/ui/savedIntakePolling";
 import {
   completeSavedIntake,
+  createSavedIntakePostRecord,
   confirmSavedIntake,
   verifySavedIntakeField,
   fetchSavedDetail,
@@ -455,6 +456,22 @@ export function IntakeWorkspace() {
   );
 
   /**
+   * 다녀온 이야기 → 사후기록 초안.
+   *
+   * 오류를 삼키지 않고 그대로 올려보낸다 — 적던 글이 사라지면 안 되므로
+   * 무엇이 실패했는지는 적은 자리에서 보여줘야 한다. 여기서 상세를 다시
+   * 읽지도 않는다. 초안은 접수를 바꾸지 않는다(승인해야 반영된다).
+   */
+  const writeIntakeRecord = useCallback(
+    async (savedId: number, memo: string) => {
+      const created = await createSavedIntakePostRecord(savedId, memo);
+      setReadRefreshNonce((n) => n + 1);
+      return created.draft;
+    },
+    [],
+  );
+
+  /**
    * blocker 하나를 푼다 — **게이트를 푸는 유일한 경로다.**
    *
    * 서버에서 이 호출은 "통화로 확인했다" 를 뜻한다. 화면에서 값을 고른 것과
@@ -630,6 +647,12 @@ export function IntakeWorkspace() {
             }
             onComplete={() =>
               void completeIntake(Number(selectedId.slice("saved-".length)))
+            }
+            onWriteRecord={(memo) =>
+              writeIntakeRecord(
+                Number(selectedId.slice("saved-".length)),
+                memo,
+              )
             }
             onVerify={(field, value) =>
               void verifyIntakeField(
