@@ -125,8 +125,18 @@ const FIELD_ORDER: Array<{ key: string; label: string }> = [
   { key: "hospital", label: "병원" },
   { key: "dept", label: "진료과" },
   { key: "target", label: "대상자" },
+  // 미등록 번호로 걸려온 통화에서 **따로 물어 받은** 성함·읍면동.
+  //
+  // 통화 앞에서 "성함과 사시는 읍면동을 말씀해 주세요" 로 20초를 따로 쓰는데,
+  // 그 답이 화면에 없었다. 복지사에게는 '신규 대상자(미등록 번호)' 한 줄만
+  // 남아서, 물어본 보람 없이 발신번호로 되걸어 "누구세요" 부터 물어야 했다.
+  { key: "spoken_name", label: "말한 성함" },
+  { key: "spoken_region", label: "말한 주소" },
   { key: "birth", label: "생년월일" },
 ];
+
+/** 값이 있을 때만 줄을 만드는 항목. */
+const OPTIONAL_KEYS = new Set(["spoken_name", "spoken_region"]);
 
 /**
  * 생년월일은 보호자 웹 신청서가 필수로 받는 값이지만(elder.birthDate),
@@ -169,74 +179,81 @@ export function toSavedIntakeDetail(
     utterance,
   });
 
-  const fields: SavedIntakeField[] = FIELD_ORDER.map(({ key, label }) => {
-    const teamField = card?.fields?.[key];
-    const value = teamField?.value?.trim() || null;
+  // 반환 타입을 콜백에 직접 적는다. .filter() 를 체이닝하면 좌변 주석이
+  // 콜백까지 흘러가지 않아 status 가 string 으로 넓어진다.
+  const fields: SavedIntakeField[] = FIELD_ORDER.map(
+    ({ key, label }): SavedIntakeField => {
+      const teamField = card?.fields?.[key];
+      const value = teamField?.value?.trim() || null;
 
-    if (key === "hospital") {
-      const evidence = [
-        ...new Set([...hospitalEvidence, ...(card?.reasons ?? [])]),
-      ];
+      if (key === "hospital") {
+        const evidence = [
+          ...new Set([...hospitalEvidence, ...(card?.reasons ?? [])]),
+        ];
+        return {
+          key,
+          label,
+          value: card?.hospital?.trim() || detail.hospital?.trim() || null,
+          status: hospital.status,
+          evidence: hospital.downgraded
+            ? [
+                ...evidence,
+                "과거 이력 기반 후보 — 어르신 직접 확인 전까지 추정으로 표시",
+              ]
+            : evidence,
+        };
+      }
+
+      if (key === "birth") {
+        const birth = readBirthValue(card, detail);
+        return {
+          key,
+          label,
+          value: birth,
+          // 보호자가 신청서에 직접 적은 값이므로 있으면 확정으로 본다.
+          status: birth ? "CONFIRMED_BY_INPUT" : "NEEDS_CONFIRMATION",
+          evidence: birth
+            ? teamField?.evidence ?? ["신청서에 보호자가 입력함"]
+            : ["신청 정보에 생년월일이 없음"],
+        };
+      }
+
+      if (key === "target") {
+        // 발신번호로 대상자를 확정하지 않는다 — **AI가 채운 값은** 무엇이든
+        // 확인 필요다. 단, 사람이 verify 로 확인한 것까지 덮으면 안 된다 —
+        // 확인함을 눌러도 배지가 확인 필요로 남아, 서버 게이트는 풀렸는데
+        // 화면만 계속 막힌 것처럼 보였다.
+        //
+        // verified_by 는 verify_card_field 만 채우는 구조화 키다. 그 이전에
+        // 확인된 접수(키가 없던 시절)는 근거 문장의 고정 접두어로 가른다 —
+        // 이 접두어도 백엔드가 만든다(화면 라벨과 무관).
+        const humanVerified =
+          Boolean(teamField?.verified_by) ||
+          (teamField?.evidence ?? []).some((item) =>
+            item.startsWith("통화로 확인함"),
+          );
+        return {
+          key,
+          label,
+          value: card?.target?.trim() || detail.target?.trim() || null,
+          status: humanVerified ? "CONFIRMED_BY_INPUT" : "NEEDS_CONFIRMATION",
+          evidence: teamField?.evidence ?? [],
+        };
+      }
+
       return {
         key,
         label,
-        value: card?.hospital?.trim() || detail.hospital?.trim() || null,
-        status: hospital.status,
-        evidence: hospital.downgraded
-          ? [
-              ...evidence,
-              "과거 이력 기반 후보 — 어르신 직접 확인 전까지 추정으로 표시",
-            ]
-          : evidence,
-      };
-    }
-
-    if (key === "birth") {
-      const birth = readBirthValue(card, detail);
-      return {
-        key,
-        label,
-        value: birth,
-        // 보호자가 신청서에 직접 적은 값이므로 있으면 확정으로 본다.
-        status: birth ? "CONFIRMED_BY_INPUT" : "NEEDS_CONFIRMATION",
-        evidence: birth
-          ? teamField?.evidence ?? ["신청서에 보호자가 입력함"]
-          : ["신청 정보에 생년월일이 없음"],
-      };
-    }
-
-    if (key === "target") {
-      // 발신번호로 대상자를 확정하지 않는다 — **AI가 채운 값은** 무엇이든
-      // 확인 필요다. 단, 사람이 verify 로 확인한 것까지 덮으면 안 된다 —
-      // 확인함을 눌러도 배지가 확인 필요로 남아, 서버 게이트는 풀렸는데
-      // 화면만 계속 막힌 것처럼 보였다.
-      //
-      // verified_by 는 verify_card_field 만 채우는 구조화 키다. 그 이전에
-      // 확인된 접수(키가 없던 시절)는 근거 문장의 고정 접두어로 가른다 —
-      // 이 접두어도 백엔드가 만든다(화면 라벨과 무관).
-      const humanVerified =
-        Boolean(teamField?.verified_by) ||
-        (teamField?.evidence ?? []).some((item) =>
-          item.startsWith("통화로 확인함"),
-        );
-      return {
-        key,
-        label,
-        value: card?.target?.trim() || detail.target?.trim() || null,
-        status: humanVerified ? "CONFIRMED_BY_INPUT" : "NEEDS_CONFIRMATION",
+        value,
+        status: value ? mapTeamStatus(teamField?.status) : "NEEDS_CONFIRMATION",
         evidence: teamField?.evidence ?? [],
+        spoken: teamField?.spoken ?? null,
       };
-    }
-
-    return {
-      key,
-      label,
-      value,
-      status: value ? mapTeamStatus(teamField?.status) : "NEEDS_CONFIRMATION",
-      evidence: teamField?.evidence ?? [],
-      spoken: teamField?.spoken ?? null,
-    };
-  });
+    },
+  )
+    // 등록된 어르신에게는 성함을 되묻지 않으므로 이 칸이 아예 없다. 빈 줄로
+    // 그리면 모든 접수에 '말한 성함 — 확인 필요' 가 붙어 잡음이 된다.
+    .filter((field) => !(OPTIONAL_KEYS.has(field.key) && field.value === null));
 
   const notes: string[] = [];
   if (card?.need_level) {
