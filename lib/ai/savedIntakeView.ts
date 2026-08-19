@@ -72,6 +72,8 @@ export interface SavedIntakeDetailView {
   fields: SavedIntakeField[];
   confirmQuestions: string[];
   notes: string[];
+  /** 외출 전 참고 — 기상·대기. 서버가 못 채우면 빈 배열이다. */
+  outingChecklist: string[];
   hospitalDowngraded: boolean;
   /** 서버가 고른 동행 지원 수준. 확정할 때 그대로 되돌려 보낸다 —
    *  화면에서 만든 값을 보내면 직원이 눌러 본 것이 확정 내용이 된다. */
@@ -280,6 +282,7 @@ export function toSavedIntakeDetail(
     urgent,
     urgentConfidence: urgent ? (detail.urgent_confident ?? null) : null,
     fields,
+    outingChecklist: card?.outing_checklist ?? [],
     confirmQuestions: card?.confirm_questions ?? [],
     notes,
     hospitalDowngraded: hospital.downgraded,

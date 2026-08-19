@@ -44,6 +44,9 @@ const TeamSavedCardSchema = z
     need_official: z.boolean().optional(),
     flags: z.array(z.string()).default([]),
     manager_notes: z.array(z.string()).default([]),
+    // 외출 전 참고 — 기상·대기 정보. 외부 API 가 미연동이거나 느리면
+    // 서버가 조용히 빈 배열로 둔다(접수를 막지 않는다).
+    outing_checklist: z.array(z.string()).default([]),
     requester: z.string().optional(),
     proxy_relation: z.string().nullable().optional(),
   })

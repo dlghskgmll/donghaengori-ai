@@ -123,3 +123,47 @@ describe("말한 성함 → 대상자", () => {
     expect(isReadOnlyField("target")).toBe(false);
   });
 });
+
+// ── 외출 전 참고 (기상·대기) ─────────────────────────────
+//
+// 백엔드가 카드에 outing_checklist 를 실어 보내는데 화면이 그 칸을 아예
+// 그리지 않았다. 공공데이터(기상청·에어코리아)를 붙여 놓고 복지사에게는
+// 한 줄도 안 보여주고 있었다.
+
+describe("외출 전 참고", () => {
+  const 기본 = {
+    id: 9,
+    target: "박순자",
+    channel: "전화",
+    status: "임시 접수",
+    created_at: "2026-08-20 09:00",
+    confirmed: 0,
+    raw_utterance: "낼 병원 가야 해",
+  };
+
+  it("서버가 준 기상·대기 문구를 그대로 싣는다", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: {
+        raw_utterance: 기본.raw_utterance,
+        outing_checklist: [
+          "미세먼지 보통 이하 (PM10 14 · PM2.5 5㎍/㎥) — 특이사항 없음",
+          "비 예보 있음 → 우산·미끄럼 주의",
+        ],
+      },
+    } as never);
+    expect(view.outingChecklist).toHaveLength(2);
+    expect(view.outingChecklist[0]).toContain("PM10 14");
+  });
+
+  it("서버가 못 채우면 빈 배열이다", () => {
+    // 외부 API 미연동이거나 좌표를 못 찾으면 서버가 조용히 건너뛴다.
+    // 그때 화면은 이 영역 자체를 그리지 않아야 한다 — 빈 상자를 두면
+    // 복지사가 "정보가 없다"와 "아직 안 불러왔다"를 구분할 수 없다.
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: { raw_utterance: 기본.raw_utterance },
+    } as never);
+    expect(view.outingChecklist).toEqual([]);
+  });
+});

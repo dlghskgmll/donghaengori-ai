@@ -273,6 +273,23 @@ export function SavedIntakeDetail({
             </section>
           ) : null}
 
+          {/* 외출 전 참고 — 기상·대기.
+              **판단하지 않고 참고만 적는다.** "가지 마세요" 는 우리가 할 말이
+              아니다. 비가 오는지 미세먼지가 나쁜지를 알려주면 우산·마스크를
+              챙길지는 복지사가 정한다.
+              서버가 못 채우면 빈 배열이라 이 영역 자체가 안 나온다 — 외부
+              API 가 미연동이거나 좌표를 못 찾는 경우다. */}
+          {detail.outingChecklist.length > 0 ? (
+            <section className="dcw-section" aria-label="외출 전 참고">
+              <h2 className="dcw-section-title">외출 전 참고</h2>
+              <ul className="dcw-checklist">
+                {detail.outingChecklist.map((line, index) => (
+                  <li key={`outing-${index}`}>{line}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {/* 다녀온 뒤에야 적을 것이 생긴다. 그 전에 칸을 띄워 두면
               가지도 않은 동행의 기록을 쓰게 된다. */}
           {completed && onWriteRecord ? (
