@@ -5972,3 +5972,32 @@ button:disabled {
   line-height: 1.55;
   color: #1f1d1a;
 }
+
+/* 외출 전 참고 — 기상·대기 한 줄씩.
+   경고가 아니라 참고다. 붉은색이나 아이콘으로 겁주지 않는다. */
+.dcw-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  list-style: none;
+}
+
+.dcw-checklist li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #44403c;
+}
+
+.dcw-checklist li::before {
+  content: "·";
+  position: absolute;
+  left: 2px;
+  color: #a8a29e;
+}

@@ -53,6 +53,7 @@ function detailWithTime(
     ],
     confirmQuestions: [],
     notes: [],
+  outingChecklist: [],
     hospitalDowngraded: false,
     confirmed: false,
     gate: null,
