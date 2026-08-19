@@ -228,6 +228,26 @@ export async function confirmSavedIntake(
 }
 
 /**
+ * 동행을 다녀왔다 — 확정 → 동행 완료.
+ *
+ * 확정은 "일정을 정했다" 이고 이것은 "실제로 다녀왔다" 다. 이 호출이 있어야
+ * 목록에서 다녀온 건이 구분되고, 보호자 타임라인이 끝까지 가고, 다음 접수의
+ * 병원 후보가 이 방문을 근거로 쓴다.
+ */
+export async function completeSavedIntake(
+  savedId: number,
+  note?: string,
+  options: Omit<SavedIntakeRequestOptions, "signal"> = {},
+): Promise<void> {
+  await authorizedPost(
+    `/api/v1/intakes/${savedId}/complete`,
+    note ? { note } : {},
+    "동행 완료를 반영하지 못했습니다.",
+    options,
+  );
+}
+
+/**
  * 통화로 확인한 값을 반영한다 — 게이트를 푸는 유일한 경로.
  *
  * **화면에서 값을 고른 것과 다르다.** 이 호출은 감사 로그에 '항목확인' 으로

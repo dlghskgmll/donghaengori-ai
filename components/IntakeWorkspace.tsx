@@ -28,6 +28,7 @@ import {
   type SavedIntakePollUpdate,
 } from "@/lib/ui/savedIntakePolling";
 import {
+  completeSavedIntake,
   confirmSavedIntake,
   verifySavedIntakeField,
   fetchSavedDetail,
@@ -428,6 +429,32 @@ export function IntakeWorkspace() {
   );
 
   /**
+   * 동행을 다녀왔다고 표시한다 — 확정 → 동행 완료.
+   *
+   * 이력이 서버에서 자동으로 쌓이므로, 반영 뒤 목록과 상세를 다시 읽어야
+   * 다음 접수가 이 방문을 근거로 쓰는 것이 화면에도 보인다.
+   */
+  const completeIntake = useCallback(
+    async (savedId: number) => {
+      setConfirmBusy(true);
+      setConfirmError(null);
+      try {
+        await completeSavedIntake(savedId);
+        await loadDetail(savedId);
+        setReadRefreshNonce((n) => n + 1);
+      } catch (error) {
+        setConfirmError(
+          error instanceof Error ? error.message : "동행 완료를 반영하지 못했습니다.",
+        );
+        await loadDetail(savedId);
+      } finally {
+        setConfirmBusy(false);
+      }
+    },
+    [loadDetail],
+  );
+
+  /**
    * blocker 하나를 푼다 — **게이트를 푸는 유일한 경로다.**
    *
    * 서버에서 이 호출은 "통화로 확인했다" 를 뜻한다. 화면에서 값을 고른 것과
@@ -600,6 +627,9 @@ export function IntakeWorkspace() {
                 acknowledge,
                 reason,
               )
+            }
+            onComplete={() =>
+              void completeIntake(Number(selectedId.slice("saved-".length)))
             }
             onVerify={(field, value) =>
               void verifyIntakeField(

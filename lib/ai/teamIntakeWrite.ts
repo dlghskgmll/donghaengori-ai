@@ -37,6 +37,10 @@ export const TeamConfirmInputSchema = z.object({
     .optional(),
 });
 
+export const TeamCompleteInputSchema = z.object({
+  note: z.string().optional(),
+});
+
 export const TeamVerifyInputSchema = z.object({
   field: z.enum(["target", "hospital", "dept", "date", "time"]),
   value: z.string().min(1),
@@ -51,6 +55,18 @@ export const TeamConfirmResultSchema = z
 
 export const TeamVerifyResultSchema = z.object({ ok: z.literal(true) }).loose();
 
+export const TeamCompleteResultSchema = z
+  .object({
+    ok: z.literal(true),
+    changed: z.boolean().optional(),
+    // 확정 병원·날짜가 없으면 이력을 못 쌓는다. 화면이 그 사실을 알아야
+    // "다녀왔다고만 표시됐다" 를 안내할 수 있다.
+    history_added: z.boolean().optional(),
+  })
+  .loose();
+
+export type TeamCompleteInput = z.infer<typeof TeamCompleteInputSchema>;
+export type TeamCompleteResult = z.infer<typeof TeamCompleteResultSchema>;
 export type TeamConfirmInput = z.infer<typeof TeamConfirmInputSchema>;
 export type TeamVerifyInput = z.infer<typeof TeamVerifyInputSchema>;
 export type TeamConfirmResult = z.infer<typeof TeamConfirmResultSchema>;
@@ -168,6 +184,26 @@ export async function confirmTeamIntake(
   const payload = await postTeam(`/api/intakes/${intakeId}/confirm`, body, options);
   return parseOrThrow(TeamConfirmResultSchema, payload, "확정 응답을 해석하지 못했습니다.");
 }
+
+/**
+ * 동행을 다녀왔다 — 확정 → 동행 완료. 이력이 자동으로 쌓인다.
+ *
+ * 확정은 "일정을 정했다" 이고 이것은 "실제로 다녀왔다" 다. 이 호출이 있어야
+ * 목록에서 다녀온 건이 구분되고, 보호자 타임라인이 끝까지 가고, 다음 접수의
+ * 병원 후보가 이 방문을 근거로 쓴다.
+ *
+ * 409 는 확정 전이거나 이미 완료라는 뜻이다 — 요청이 틀린 것이 아니다.
+ */
+export async function completeTeamIntake(
+  intakeId: number,
+  input: TeamCompleteInput = {},
+  options: TeamWriteOptions = {},
+): Promise<TeamCompleteResult> {
+  const body = TeamCompleteInputSchema.parse(input);
+  const payload = await postTeam(`/api/intakes/${intakeId}/complete`, body, options);
+  return parseOrThrow(TeamCompleteResultSchema, payload, "동행 완료 응답을 해석하지 못했습니다.");
+}
+
 
 /** 통화로 확인한 값을 반영한다 — 게이트를 푸는 유일한 경로. */
 export async function verifyTeamIntakeField(

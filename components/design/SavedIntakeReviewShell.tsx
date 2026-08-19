@@ -96,6 +96,7 @@ export function SavedIntakeFinalization({
   confirmed,
   gate,
   onConfirm,
+  onComplete,
   busy = false,
   error = null,
 }: {
@@ -103,6 +104,8 @@ export function SavedIntakeFinalization({
   gate: SavedIntakeGate | null;
   /** 확정을 실제로 보낸다. 없으면 준비 중 상태로 비활성 표시한다. */
   onConfirm?: (acknowledge: boolean, reason: string | null) => void;
+  /** 동행을 다녀왔다고 표시한다. 확정된 접수에서만 내려온다. */
+  onComplete?: () => void;
   busy?: boolean;
   error?: string | null;
 }) {
@@ -112,9 +115,34 @@ export function SavedIntakeFinalization({
   const [ackReason, setAckReason] = useState("");
 
   if (mode === "confirmed") {
+    // 확정에서 끝나지 않는다. 다녀왔다는 표시가 있어야 목록에서 "아직 안 간
+    // 것" 과 갈리고, 그 방문이 다음 접수의 병원 근거가 된다.
     return (
-      <div className="dcw-cta">
-        <span className="dcw-cta-done">✓ 접수가 확정됐어요</span>
+      <div className="dcw-cta-stack">
+        <div className="dcw-cta">
+          <span className="dcw-cta-done">✓ 접수가 확정됐어요</span>
+        </div>
+        {onComplete ? (
+          <>
+            <div className="dcw-cta-actions">
+              <button
+                type="button"
+                className="dcw-btn-primary"
+                disabled={busy}
+                onClick={busy ? undefined : onComplete}
+              >
+                {busy ? "반영하는 중…" : "동행 다녀왔어요"}
+              </button>
+            </div>
+            <p className="dcw-cta-note">
+              누르면 이번 방문이 어르신 기록에 쌓여요. 다음 접수 때 이 병원이
+              후보로 먼저 나와요.
+            </p>
+          </>
+        ) : null}
+        {error ? (
+          <p className="dcw-cta-note" role="alert">{error}</p>
+        ) : null}
       </div>
     );
   }

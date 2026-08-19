@@ -33,6 +33,7 @@ interface SavedIntakeDetailProps {
   onConfirm?: (acknowledge: boolean, reason: string | null) => void;
   /** blocker 하나를 통화로 확인해 게이트를 푼다. */
   onVerify?: (field: string, value: string) => void;
+  onComplete?: () => void;
   confirmBusy?: boolean;
   confirmError?: string | null;
 }
@@ -76,6 +77,7 @@ export function SavedIntakeDetail({
   onAuditRetry,
   onConfirm,
   onVerify,
+  onComplete,
   confirmBusy,
   confirmError,
 }: SavedIntakeDetailProps) {
@@ -257,6 +259,7 @@ export function SavedIntakeDetail({
         confirmed={detail.confirmed}
         gate={detail.gate}
         onConfirm={onConfirm}
+        onComplete={onComplete}
         busy={confirmBusy}
         error={confirmError}
       />
