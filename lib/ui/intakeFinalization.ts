@@ -97,3 +97,32 @@ export type VerifiableField = (typeof VERIFIABLE_FIELDS)[number];
 export function isVerifiableField(field: string): field is VerifiableField {
   return (VERIFIABLE_FIELDS as readonly string[]).includes(field);
 }
+
+/**
+ * 이 줄의 확인 버튼이 **서버에 보낼 항목**. null 이면 버튼을 주지 않는다.
+ *
+ * 대개 자기 자신이지만 '말한 성함' 은 다르다 — 그 줄 자체는 서버가 받지
+ * 않는데, 들은 이름을 대상자로 올리는 것이 복지사가 그 줄을 보고 할 일
+ * 그 자체다. 연결하지 않으면 이름을 눈으로 읽고 대상자 칸에 손으로 다시
+ * 옮겨 적어야 한다 — 그럴 거면 화면에 띄운 보람이 없다.
+ */
+export function verifyFieldFor(key: string): VerifiableField | null {
+  if (key === "spoken_name") return "target";
+  return isVerifiableField(key) ? key : null;
+}
+
+/**
+ * 확인·수정 버튼을 감출 항목.
+ *
+ * 서버에 보낼 곳이 없는데 버튼을 남기면 로컬로만 도는 '적용'이 걸린다.
+ * 눌러서 확인됨으로 보이는데 서버는 모르는 상태 — 화면만 풀리고 게이트는
+ * 그대로다. '말한 주소' 는 카드에 채울 칸이 없어 여기 해당한다.
+ */
+export function isReadOnlyField(key: string): boolean {
+  return key === "spoken_region";
+}
+
+/** 확인 버튼 문구. 다른 항목을 채우는 줄은 무엇이 되는지 적는다. */
+export function acceptLabelFor(key: string): string | undefined {
+  return key === "spoken_name" ? "대상자로 확인" : undefined;
+}
