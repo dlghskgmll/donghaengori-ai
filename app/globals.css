@@ -4121,3 +4121,1507 @@ button:disabled {
     opacity: 1;
   }
 }
+
+/* ============================================================
+   요청 작업공간 (dcw-*) — 4열 → 3열 리디자인.
+   TDS의 정보 구조(ListHeader/ListRow/Divider/Sticky CTA)를
+   동행고리 팔레트로 재해석했다. border box 대신 spacing과
+   typography, divider로 위계를 만든다.
+   dc-block/dc-detail-* 등 공유 클래스는 다른 탭이 쓰므로
+   여기서는 건드리지 않는다.
+   ============================================================ */
+
+.dcw-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dcw-inner {
+  max-width: 720px;
+  padding: 28px 36px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- Page Header ---------- */
+.dcw-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 22px;
+}
+
+.dcw-head-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dcw-head-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #1f1d1a;
+  overflow-wrap: anywhere;
+}
+
+.dcw-head-meta {
+  margin: 0;
+  font-size: 13.5px;
+  color: #78716c;
+}
+
+.dcw-head-attn {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #c2410c;
+}
+
+/* ---------- Section (ListHeader + rows) ---------- */
+.dcw-section {
+  padding: 20px 0 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dcw-section-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #78716c;
+  letter-spacing: 0.02em;
+}
+
+.dcw-utterance {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #44403c;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dcw-quiet {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #78716c;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- ListRow ---------- */
+.dcw-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dcw-row {
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dcw-row:last-child {
+  border-bottom: none;
+}
+
+.dcw-row-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 24px;
+}
+
+.dcw-row-label {
+  flex: none;
+  width: 88px;
+  font-size: 14px;
+  color: #78716c;
+}
+
+.dcw-row-value-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dcw-row-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f1d1a;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.dcw-row-value.is-empty {
+  font-weight: 500;
+  color: #a8a29e;
+}
+
+.dcw-mark {
+  font-size: 12.5px;
+  color: #78716c;
+  white-space: nowrap;
+}
+
+.dcw-mark.is-human {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.dcw-mark.is-attn {
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.dcw-row-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.dcw-action {
+  border: 0;
+  background: none;
+  padding: 4px 8px;
+  margin: -4px 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #57534e;
+  white-space: nowrap;
+}
+
+.dcw-action:hover:not(:disabled) {
+  background: #f5f4f1;
+}
+
+.dcw-action.is-primary {
+  color: #c2410c;
+}
+
+.dcw-action.is-primary:hover:not(:disabled) {
+  background: #fff7ed;
+}
+
+.dcw-action:disabled {
+  color: #a8a29e;
+  cursor: not-allowed;
+}
+
+.dcw-row-sub {
+  margin: 5px 0 0;
+  padding-left: 100px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #78716c;
+}
+
+.dcw-row-sub.is-question {
+  color: #a16207;
+}
+
+/* ---------- 인라인 편집 ---------- */
+.dcw-row-editor {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dcw-row-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid #d6d3d1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #1f1d1a;
+}
+
+.dcw-row-input:focus {
+  outline: none;
+  border-color: #f94704;
+}
+
+.dcw-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* ---------- 후보 선택 ---------- */
+.dcw-candidates {
+  margin: 8px 0 0 100px;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dcw-candidates legend {
+  padding: 0 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #78716c;
+}
+
+.dcw-candidate {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+
+.dcw-candidate:has(input:checked) {
+  border-color: #f94704;
+  background: #fff7ed;
+}
+
+.dcw-candidate input {
+  margin-top: 2px;
+  accent-color: #f94704;
+}
+
+.dcw-candidate > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dcw-candidate-value {
+  font-weight: 600;
+  color: #1f1d1a;
+}
+
+.dcw-candidate-evidence {
+  font-size: 12.5px;
+  color: #78716c;
+}
+
+/* ---------- 근거 ---------- */
+.dcw-row-evidence-wrap {
+  margin: 5px 0 0;
+  padding-left: 100px;
+}
+
+.dcw-ev-toggle {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #a8a29e;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dcw-ev-toggle:hover {
+  color: #57534e;
+}
+
+.dcw-evidence {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #78716c;
+}
+
+/* ---------- 활동 기록 timeline ---------- */
+.dcw-timeline {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dcw-timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.dcw-timeline-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #d6d3d1;
+}
+
+.dcw-timeline-item.is-warning .dcw-timeline-dot {
+  background: #d97706;
+}
+
+.dcw-timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+  color: #44403c;
+}
+
+.dcw-timeline-body p {
+  margin: 0;
+  color: #78716c;
+}
+
+.dcw-timeline-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.dcw-timeline-head time {
+  font-size: 12.5px;
+  color: #a8a29e;
+}
+
+.dcw-timeline-actor {
+  font-size: 12.5px;
+  color: #78716c;
+}
+
+/* ---------- Sticky CTA ---------- */
+.dcw-cta {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 36px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.dcw-cta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dcw-cta-helper {
+  font-size: 14px;
+  font-weight: 600;
+  color: #44403c;
+}
+
+.dcw-cta-note {
+  font-size: 12.5px;
+  color: #a8a29e;
+}
+
+.dcw-cta-done {
+  font-size: 15px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.dcw-cta-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dcw-btn-primary {
+  height: 42px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 10px;
+  background: #f94704;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.dcw-btn-primary:hover:not(:disabled) {
+  background: #e04004;
+}
+
+.dcw-btn-primary:disabled {
+  background: #f5f4f1;
+  color: #a8a29e;
+  cursor: not-allowed;
+}
+
+.dcw-btn-ghost {
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid #d6d3d1;
+  border-radius: 10px;
+  background: #fff;
+  color: #57534e;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dcw-btn-ghost:hover:not(:disabled) {
+  border-color: #a8a29e;
+}
+
+.dcw-btn-ghost:disabled {
+  color: #a8a29e;
+  cursor: not-allowed;
+}
+
+/* ---------- 요청 목록 보완 ---------- */
+/* 확정 배지 — 실제 상태에만 배지를 쓴다(§5). */
+.dc-chip-good {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+/* '확인 필요'는 배지 반복 대신 행동 문구 한 줄로. */
+.dc-row-need {
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #c2410c;
+}
+
+/* 미확인 확정(예외 행동) — 스티키 바 위에 사유 선택이 열린다. */
+.dcw-cta-stack {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.dcw-ack {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 36px;
+  border-top: 1px solid #fde68a;
+  background: #fffdf5;
+}
+
+.dcw-ack-label {
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.dcw-ack-select {
+  height: 36px;
+  min-width: 180px;
+  padding: 0 10px;
+  border: 1px solid #d6d3d1;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #1f1d1a;
+}
+
+.dcw-btn-warning {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: #fff;
+  color: #92400e;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.dcw-btn-warning:hover:not(:disabled) {
+  background: #fef3c7;
+}
+
+.dcw-btn-warning:disabled {
+  border-color: #e7e5e4;
+  color: #a8a29e;
+  cursor: not-allowed;
+}
+
+.dcw-cta-error {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+/* ============================================================
+   Claude Design 프로토타입 visual parity — shell·사이드바·홈.
+   레이아웃 수치(패널 radius 16 / 캔버스 #F1EFEA / gap 14 /
+   nav 196px / rail 320px / KPI strip max 620px)는 프로토타입을
+   따르고, 색은 동행고리 브랜드 토큰으로 매핑한다:
+   #F97316→#F94704 · #C2410C→#C43A05 · #FFF1E7→#FEF1EA.
+   ============================================================ */
+
+/* ---------- Shell: 떠 있는 패널 구조 ---------- */
+.dc-shell {
+  background: #F1EFEA;
+  padding: 14px;
+  gap: 14px;
+}
+
+.dc-nav {
+  width: 196px;
+  background: #fff;
+  border-radius: 16px;
+}
+
+.dc-list {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 16px;
+}
+
+.dc-detail {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ---------- 사이드바 ---------- */
+.dc-nav-item {
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #57534E;
+}
+
+.dc-nav-item.is-active {
+  background: #FEF1EA;
+  color: #C43A05;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.dc-nav-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.dc-nav-user.is-signed-in {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 10px 2px;
+  margin-top: 6px;
+}
+
+.dc-nav-user-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #FEF1EA;
+  color: #C43A05;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dc-nav-user-id {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dc-nav-user-id .dc-nav-user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-nav-user-logout {
+  margin-left: auto;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #a8a29e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dc-nav-user-logout:hover:not(:disabled) {
+  background: #f5f4f1;
+  color: #57534e;
+}
+
+/* ---------- ElderAvatar (프로토타입: 따뜻한 브랜드 틴트) ---------- */
+.av {
+  flex: none;
+  border-radius: 50%;
+  background: #FEF1EA;
+  color: #C43A05;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.av--sm { width: 28px; height: 28px; }
+.av--md { width: 34px; height: 34px; }
+.av--lg { width: 48px; height: 48px; }
+
+.av__initial { font-weight: 700; line-height: 1; }
+.av--sm .av__initial { font-size: 12px; }
+.av--md .av__initial { font-size: 14px; }
+.av--lg .av__initial { font-size: 19px; }
+
+/* ---------- ChannelIndicator ---------- */
+.ch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #78716c;
+  white-space: nowrap;
+}
+
+/* 로고의 'AI'만 브랜드 오렌지로 — 보호자 포털 헤더와 같은 처리. */
+.dc-brand-ai {
+  color: #F94704;
+}
+
+/* ---------- 통화 확인(verify) 패널 — 게이트를 푸는 유일한 경로 ---------- */
+.dcw-verify {
+  padding: 14px 36px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: #FCFBF9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dcw-verify-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dcw-verify-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #44403C;
+}
+
+.dcw-verify-head .dcw-action {
+  margin-left: auto;
+}
+
+.dcw-verify-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dcw-verify-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dcw-verify-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #57534E;
+}
+
+.dcw-verify-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dcw-verify-input .dcw-row-input {
+  max-width: 320px;
+}
+
+.dcw-verify-question {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #A16207;
+}
+
+.dcw-verify-note {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #78716C;
+}
+
+.dcw-verify-note strong {
+  color: #44403C;
+}
+
+/* ============================================================
+   홈 리디자인 — 따뜻한 돌봄 + 실무 대시보드.
+   크림/웜 베이스 위에 카드형 KPI·강조 CTA·우측 보조 카드.
+   브랜드 오렌지(#F94704/#C43A05/#FEF1EA)를 중심으로,
+   민트·블루는 아이콘 포인트로만 제한한다.
+   ============================================================ */
+
+.dch-panel {
+  flex-direction: row;
+}
+
+.dch-main {
+  flex: 1;
+  min-width: 0;
+  padding: 26px 34px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #FFFDFA 0%, #fff 180px);
+}
+
+/* ---------- Welcome ---------- */
+.dch-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 2px 0;
+}
+
+.dch-welcome-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* hero 일러스트 — 텍스트를 밀거나 가리지 않도록 우측에서만 줄어든다.
+   원본 395x212 비율을 aspect-ratio + contain으로 고정한다. */
+.dch-hero {
+  flex: 0 1 auto;
+  width: clamp(240px, 26vw, 340px);
+  height: auto;
+  aspect-ratio: 395 / 212;
+  object-fit: contain;
+  align-self: center;
+  /* 투명 PNG이므로 cream/white surface 위에 그대로 얹힌다. */
+  pointer-events: none;
+  user-select: none;
+}
+
+.dch-title {
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: #1F1D1A;
+}
+
+.dch-greeting {
+  font-size: 14.5px;
+  color: #57534E;
+}
+
+.dch-sub {
+  font-size: 13px;
+  color: #A8A29E;
+}
+
+/* ---------- KPI summary strip ----------
+   카드 4개가 아니라 하나의 surface다. 셀 사이는 1px divider만 쓰고,
+   그림자·아이콘 박스·셀별 accent color를 두지 않는다 — Home의 주인공은
+   아래 '먼저 처리할 일'이고 KPI는 오늘 상황 요약이다. */
+.dch-kpis {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #EDE9E1;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.dch-kpi {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 15px 18px 14px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.dch-kpi + .dch-kpi {
+  border-left: 1px solid #EDE9E1;
+}
+
+.dch-kpi:hover {
+  background: #FCFBF9;
+}
+
+/* 숫자가 가장 강한 요소다. 단위는 붙어 있지만 한 단계 물러난다. */
+.dch-kpi-num {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #1F1D1A;
+  font-variant-numeric: tabular-nums;
+}
+
+.dch-kpi-num em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 600;
+  color: #A8A29E;
+  margin-left: 3px;
+}
+
+.dch-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #44403C;
+}
+
+.dch-kpi-desc {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #A8A29E;
+}
+
+/* 즉시 행동이 필요한 칸 하나만 강조 — 면을 칠하지 않고 숫자와 작은 점으로. */
+.dch-kpi.is-attn .dch-kpi-num {
+  color: #C43A05;
+}
+
+.dch-kpi.is-attn .dch-kpi-label {
+  color: #1F1D1A;
+  font-weight: 700;
+}
+
+.dch-kpi-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #F94704;
+}
+
+/* ---------- 먼저 처리할 일 ---------- */
+.dch-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #44403C;
+}
+
+.dch-todo {
+  border: 1px solid #F0EDE6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(31, 29, 26, 0.03);
+  padding: 18px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dch-todo-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.dch-count {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #F94704;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dch-todo-empty {
+  padding: 22px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  color: #57534E;
+}
+
+.dch-todo-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dch-todo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 2px;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.dch-todo-row:hover {
+  background: #FAF9F7;
+}
+
+.dch-todo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dch-todo-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* flex 자식은 min-width:auto라 내용 폭 아래로 줄지 않는다 — 임의 길이의
+   대상자 이름이 배지를 밀어내지 않도록 축소와 생략을 함께 준다. */
+.dch-todo-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 650;
+  white-space: nowrap;
+  color: #1F1D1A;
+}
+
+.dch-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.dch-badge.is-amber {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #B45309;
+}
+
+.dch-badge.is-red {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+}
+
+.dch-todo-sub {
+  font-size: 13px;
+  color: #57534E;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dch-todo-action {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #C43A05;
+  white-space: nowrap;
+  flex: none;
+}
+
+.dch-all {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 7px 16px;
+  border: 1px solid #EDE4D3;
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #57534E;
+  cursor: pointer;
+}
+
+.dch-all:hover {
+  border-color: #D5C8B2;
+  color: #1F1D1A;
+}
+
+/* ---------- 하단 CTA 배너 ---------- */
+.dch-cta-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: #FEF1EA;
+}
+
+.dch-cta-icon {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  color: #E04004;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dch-cta-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dch-cta-text strong {
+  font-size: 15px;
+  font-weight: 750;
+  color: #1F1D1A;
+}
+
+.dch-cta-text span {
+  font-size: 13px;
+  color: #6E6259;
+}
+
+.dch-cta-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #F94704;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dch-cta-btn:hover {
+  background: #E04004;
+}
+
+/* ---------- 우측 rail ---------- */
+.dch-rail {
+  width: 324px;
+  flex: none;
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  background: #FCFBF9;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.dch-card {
+  background: #fff;
+  border: 1px solid #F0EDE6;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(31, 29, 26, 0.03);
+  padding: 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dch-rail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dch-week-nav {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.dch-week-nav button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: #A8A29E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dch-week-nav button:hover {
+  background: #F5F4F1;
+  color: #57534E;
+}
+
+.dch-rail-more {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #78716C;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dch-rail-more:hover {
+  color: #1F1D1A;
+}
+
+.dch-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dch-week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dch-week-label {
+  font-size: 11.5px;
+  color: #A8A29E;
+}
+
+.dch-week-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #57534E;
+}
+
+.dch-week-num.is-today {
+  background: #F94704;
+  color: #fff;
+  font-weight: 700;
+}
+
+.dch-today {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 12px;
+}
+
+.dch-today-empty {
+  padding: 14px 0 8px;
+  font-size: 13.5px;
+  color: #78716C;
+}
+
+.dch-today-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dch-today-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 8px;
+}
+
+.dch-today-row:hover {
+  background: #FAF9F7;
+}
+
+.dch-today-time {
+  font-size: 13.5px;
+  font-weight: 700;
+  width: 42px;
+  flex: none;
+  color: #1F1D1A;
+  font-variant-numeric: tabular-nums;
+}
+
+.dch-today-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 5px;
+  background: #F94704;
+}
+
+.dch-today-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dch-today-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 650;
+  color: #1F1D1A;
+}
+
+.dch-today-sub {
+  font-size: 12.5px;
+  color: #78716C;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dch-today-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #B45309;
+  white-space: nowrap;
+}
+
+/* status는 backend가 주는 임의 문자열이다. flex:none만 두면 긴 값이 rail을
+   밀어내므로 최대 폭과 생략을 함께 건다. */
+.dch-today-chip {
+  flex: none;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #FEF1EA;
+  color: #C43A05;
+  white-space: nowrap;
+}
+
+/* ---------- 이번 주 한눈에 보기 ---------- */
+.dch-glance-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dch-glance-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 2px;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 8px;
+}
+
+.dch-glance-row:first-child {
+  border-top: 0;
+}
+
+.dch-glance-row:hover {
+  background: #FAF9F7;
+}
+
+.dch-glance-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dch-glance-icon.is-amber { background: #FFF6DE; color: #B45309; }
+.dch-glance-icon.is-mint { background: #EAF5F0; color: #28725A; }
+.dch-glance-icon.is-blue { background: #EDF3FB; color: #3F68A8; }
+
+.dch-glance-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dch-glance-label {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: #1F1D1A;
+}
+
+.dch-glance-desc {
+  font-size: 12px;
+  color: #A8A29E;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dch-glance-num {
+  flex: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1F1D1A;
+  font-variant-numeric: tabular-nums;
+}
+
+.dch-glance-arrow {
+  flex: none;
+  color: #D6D3D1;
+}
+
+/* ---------- 사이드바 유저 카드 ---------- */
+.dc-nav-user.is-signed-in {
+  border: 1px solid #F0EDE6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 10px 2px 2px;
+  background: #FFFDFA;
+}
+
+/* 스크린리더 전용 — 숫자 배지의 단위처럼 시각적으로는 중복인 텍스트에 쓴다.
+   generic span의 aria-label은 ARIA에서 무시되므로 실제 텍스트를 숨겨서 넣는다. */
+.dch-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 좁은 데스크탑에서 KPI 4열이 눌리면 설명이 잘린다 — 2×2로 접는다.
+   shell 자체가 min-width:1240px이라 그 아래는 shell이 가로 스크롤한다. */
+@media (max-width: 1380px) {
+  .dch-main {
+    padding: 24px 26px 28px;
+  }
+
+  .dch-rail {
+    width: 300px;
+  }
+
+  /* 좁아지면 4칸이 눌리므로 2×2로 접는다. flex 대신 grid로 바꿔야
+     divider가 셀 경계에 맞는다. */
+  .dch-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dch-kpi + .dch-kpi {
+    border-left: 0;
+  }
+
+  .dch-kpi:nth-child(even) {
+    border-left: 1px solid #EDE9E1;
+  }
+
+  .dch-kpi:nth-child(n + 3) {
+    border-top: 1px solid #EDE9E1;
+  }
+
+  /* 본문이 좁아지면 일러스트를 먼저 양보한다. */
+  .dch-hero {
+    width: clamp(200px, 22vw, 260px);
+  }
+}
+
+/* 더 좁아지면 인사말이 우선이다 — 장식은 감춘다. */
+@media (max-width: 1180px) {
+  .dch-hero {
+    display: none;
+  }
+}

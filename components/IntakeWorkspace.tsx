@@ -78,7 +78,7 @@ const NEW_ARRIVAL_VISIBLE_MS = 3500;
 // 실제 payload가 오기 전까지 empty/loaded event를 꾸며내지 않고 명시적 오류 상태를 준다.
 const INTAKE_AUDIT_NOT_CONNECTED: IntakeAuditState = {
   status: "error",
-  message: "직원 인증과 접수 처리 이력 조회가 아직 연결되지 않았습니다.",
+  message: "활동 기록 연결을 준비하고 있어요.",
 };
 
 function errorMessageOf(payload: unknown, fallback: string): string {
@@ -127,17 +127,31 @@ function previewRow(record: PreviewRecord): RequestRow {
   };
 }
 
+/** 2026-08-20 → 8월 20일. 형식이 다르면 원본을 그대로 둔다(지어내지 않는다). */
+function shortDateLabel(value: string | null): string | null {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  return `${Number(match[2])}월 ${Number(match[3])}일`;
+}
+
 function savedRow(item: SavedIntakeSummary): RequestRow {
   const urgent = getUrgentPresentation(item.urgent, item.urgentConfidence);
+  const visitDate = shortDateLabel(item.appointmentDate);
   return {
     id: `saved-${item.id}`,
     title: item.target ?? "대상자 확인 필요",
     line2: urgent
       ? "카드 없음 · 사람 확인 우선"
       : item.hospital
-        ? `${item.hospital}${item.hospitalStatus === "INFERRED" ? " · 추정" : ""}`
+        ? [
+            `${item.hospital}${item.hospitalStatus === "INFERRED" ? " · 추정" : ""}`,
+            visitDate,
+          ]
+            .filter(Boolean)
+            .join(" · ")
         : "병원 확인 필요",
-    meta: [item.createdAt, item.channel].filter(Boolean).join(" · ") || "접수 시각 미상",
+    meta: [item.channel, item.createdAt].filter(Boolean).join(" · ") || "접수 시각 미상",
     badge: urgent?.label ?? (item.needsConfirmation ? "확인 필요" : null),
     badgeTone: urgent?.tone ?? "warn",
     statusText: urgent
@@ -314,7 +328,8 @@ export function IntakeWorkspace() {
   // 목록에는 time 컬럼이 없다. 일정 탭에서 날짜가 있는 saved intake의 상세만
   // 읽어 실제 time 값과 확인 상태를 채운다. 실패한 시간은 추측하지 않는다.
   useEffect(() => {
-    if (tab !== "schedule") return;
+    // 홈의 '오늘 일정' rail도 실제 예약 시간을 보여준다 — 일정 탭과 같은 read 경로.
+    if (tab !== "schedule" && tab !== "home") return;
     const controller = new AbortController();
     const todayKey = localDateKey(new Date());
     const ids = saved
@@ -708,6 +723,15 @@ export function IntakeWorkspace() {
           }}
           onNewIntake={beginNewIntake}
           onOpenRequest={openSavedRequest}
+          onOpenRequests={(nextFilter) => {
+            setTab("request");
+            setIsComposing(false);
+            if (nextFilter) setFilter(nextFilter);
+          }}
+          onOpenSchedule={() => setTab("schedule")}
+          onOpenRecords={() => setTab("record")}
+          times={scheduleTimes}
+          staffName={session ? teamSessionLabel(session).name : null}
         />
       ) : tab === "schedule" ? (
         <ScheduleView

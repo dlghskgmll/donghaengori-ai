@@ -5,6 +5,7 @@ import {
   normalizeSavedHospitalStatus,
   type TeamIntakeDetail,
   type TeamIntakeRow,
+  type TeamSavedCard,
 } from "./teamIntakeRead";
 
 // 저장된 접수를 UI가 그대로 그릴 수 있는 read model로 옮긴다.
@@ -124,7 +125,34 @@ const FIELD_ORDER: Array<{ key: string; label: string }> = [
   { key: "hospital", label: "병원" },
   { key: "dept", label: "진료과" },
   { key: "target", label: "대상자" },
+  { key: "birth", label: "생년월일" },
 ];
+
+/**
+ * 생년월일은 보호자 웹 신청서가 필수로 받는 값이지만(elder.birthDate),
+ * 접수카드 read 계약에서 어떤 이름으로 오는지는 백엔드가 정한다. 그래서
+ * card.fields.birth 를 우선 보고, 없으면 카드에 실려 올 수 있는 관용적인
+ * 키를 순서대로 확인한다 — **실제로 payload에 있는 값만 읽는다.**
+ * 어느 쪽도 없으면 null로 두고 화면이 "확인 필요"로 표시한다(값을 만들지 않는다).
+ */
+const BIRTH_CARD_KEYS = ["birth", "birth_date", "birthDate", "birthday"] as const;
+
+function readBirthValue(
+  card: TeamSavedCard | null,
+  detail: TeamIntakeDetail,
+): string | null {
+  const fromField = card?.fields?.birth?.value?.trim();
+  if (fromField) return fromField;
+  // TeamSavedCardSchema·TeamIntakeDetailSchema는 loose라 계약에 없는 키도 살아 있다.
+  for (const source of [card, detail] as Array<Record<string, unknown> | null>) {
+    if (!source) continue;
+    for (const key of BIRTH_CARD_KEYS) {
+      const raw = source[key];
+      if (typeof raw === "string" && raw.trim()) return raw.trim();
+    }
+  }
+  return null;
+}
 
 export function toSavedIntakeDetail(
   detail: TeamIntakeDetail,
@@ -160,6 +188,20 @@ export function toSavedIntakeDetail(
               "과거 이력 기반 후보 — 어르신 직접 확인 전까지 추정으로 표시",
             ]
           : evidence,
+      };
+    }
+
+    if (key === "birth") {
+      const birth = readBirthValue(card, detail);
+      return {
+        key,
+        label,
+        value: birth,
+        // 보호자가 신청서에 직접 적은 값이므로 있으면 확정으로 본다.
+        status: birth ? "CONFIRMED_BY_INPUT" : "NEEDS_CONFIRMATION",
+        evidence: birth
+          ? teamField?.evidence ?? ["신청서에 보호자가 입력함"]
+          : ["신청 정보에 생년월일이 없음"],
       };
     }
 

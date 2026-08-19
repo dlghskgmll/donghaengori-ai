@@ -168,15 +168,21 @@ export function RequestList({
                   ) : null}
                   <span className="dc-row-title">{row.title}</span>
                 </span>
-                {row.badge ? (
+                {/* 우측 표시는 하나만 — 긴급(위험) > 확정 > 그 외 실제 상태 순.
+                    '확인 필요'는 badge가 아니라 하단 행동 문구로 보여준다. */}
+                {row.badge === "긴급" ? (
+                  <span className="dc-chip dc-chip-danger">긴급</span>
+                ) : row.confirmed ? (
+                  <span className="dc-chip dc-chip-good">확정</span>
+                ) : row.badge && row.badge !== "확인 필요" ? (
                   <span className={`dc-chip dc-chip-${row.badgeTone ?? "neutral"}`}>
                     {row.badge}
                   </span>
-                ) : null}
-                {row.statusText ? (
+                ) : row.statusText ? (
                   <span className="dc-row-status">{row.statusText}</span>
                 ) : null}
               </span>
+              <span className="dc-row-meta">{row.meta}</span>
               <span className="dc-row-line2">{row.line2}</span>
               {row.alert ? (
                 <span
@@ -187,7 +193,9 @@ export function RequestList({
                   {row.alert}
                 </span>
               ) : null}
-              <span className="dc-row-meta">{row.meta}</span>
+              {row.badge === "확인 필요" ? (
+                <span className="dc-row-need">확인할 정보 있어요</span>
+              ) : null}
             </button>
           ))
         )}

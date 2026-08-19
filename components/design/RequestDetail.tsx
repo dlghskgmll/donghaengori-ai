@@ -7,10 +7,7 @@ import {
   type IntakeFieldResolutionAction,
   type IntakeFieldResolutionState,
 } from "@/lib/ui/intakeFieldResolution";
-import {
-  buildDesignGroups,
-  summarizeNeeds,
-} from "./analysisFields";
+import { buildDesignGroups } from "./analysisFields";
 import { ResolvableFieldRow } from "./ResolvableFieldRow";
 import { UrgentIntakeDetail } from "./UrgentIntakeDetail";
 
@@ -26,10 +23,17 @@ interface RequestDetailProps {
   onResolutionAction: (action: IntakeFieldResolutionAction) => void;
 }
 
+const REQUEST_TITLE_LABELS: Partial<
+  Record<IntakeAnalysis["request_type"]["value"], string>
+> = {
+  HOSPITAL_COMPANION: "병원동행",
+  PHARMACY: "약국 동행",
+  GUARDIAN_CONTACT: "보호자 연락",
+};
+
 export function RequestDetail({
   analysis,
   transcript,
-  meta,
   channelLabel,
   receivedLabel,
   onReanalyze,
@@ -38,13 +42,6 @@ export function RequestDetail({
   onResolutionAction,
 }: RequestDetailProps) {
   const person = analysis.caller.person_candidates[0] ?? null;
-  const providerLabel = meta?.fallback_used
-    ? "기본 분석"
-    : meta?.provider_used === "team"
-      ? "Team AI"
-      : meta?.provider_used === "openai"
-        ? "OpenAI"
-        : "Mock";
 
   if (analysis.safety.signal_detected) {
     return (
@@ -53,7 +50,7 @@ export function RequestDetail({
         receivedLabel={receivedLabel}
         channelLabel={channelLabel}
         transcript={transcript}
-        sourceLabel={`분석 · ${providerLabel}`}
+        sourceLabel="분석 미리보기"
         urgentConfidence={analysis.safety.urgent_confident}
         onReanalyze={onReanalyze}
       />
@@ -61,12 +58,14 @@ export function RequestDetail({
   }
 
   const groups = buildDesignGroups(analysis);
-  const needs = summarizeNeeds(groups, (field) =>
-    isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
-  );
+  const allFields = groups.flatMap((group) => group.fields);
+  const pendingCount = allFields.filter(
+    (field) =>
+      field.status === "NEEDS_CONFIRMATION" &&
+      !isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
+  ).length;
   const attachedQuestions = new Set(
-    groups
-      .flatMap((group) => group.fields)
+    allFields
       .filter((field) => field.status === "NEEDS_CONFIRMATION")
       .map((field) => field.confirmationQuestion)
       .filter((question): question is string => Boolean(question)),
@@ -75,86 +74,84 @@ export function RequestDetail({
     (question) => !attachedQuestions.has(question),
   );
 
+  const intentLabel = REQUEST_TITLE_LABELS[analysis.request_type.value];
+  const title = person
+    ? intentLabel
+      ? `${person.name} 어르신의 ${intentLabel} 요청`
+      : `${person.name} 어르신의 요청`
+    : "대상자 확인이 필요한 요청";
+
   return (
     <main className="dc-detail">
-      <div className="dc-detail-head">
-        <span className="dc-detail-name">
-          {person ? person.name : "대상자 확인 필요"}
-        </span>
-        <span className="dc-detail-sub">어르신 정보</span>
-        <span className="dc-detail-meta">{receivedLabel}</span>
-        <span className="dc-chip dc-chip-neutral">AI 초안</span>
-      </div>
-
-      <div className="dc-detail-body">
-        <div className="dc-detail-left">
-          <div className="dc-block">
-            <span className="dc-block-title">
-              요청 내용 <span className="dc-block-title-sub">{channelLabel}</span>
-            </span>
-            <div className="dc-utterance">
-              <span className="dc-utterance-meta">{receivedLabel}</span>
-              <span className="dc-utterance-text">{transcript}</span>
+      <div className="dcw-scroll">
+        <div className="dcw-inner">
+          <header className="dcw-head">
+            <div className="dcw-head-top">
+              <h1 className="dcw-head-title">{title}</h1>
+              <span className="dc-chip dc-chip-neutral">미리보기</span>
             </div>
-          </div>
+            <p className="dcw-head-meta">
+              {[channelLabel, receivedLabel].join(" · ")}
+            </p>
+            {pendingCount > 0 ? (
+              <p className="dcw-head-attn">확인할 정보 {pendingCount}개 있어요</p>
+            ) : null}
+          </header>
 
-          {remainingQuestions.length > 0 ? (
-            <div className="dc-block">
-              <span className="dc-block-title">확인 과정</span>
-              <div className="dc-checks">
-                {remainingQuestions.map((question, index) => (
-                  <div className="dc-check" key={`q-${index}`}>
-                    <span className="dc-check-who">담당자 확인 질문</span>
-                    <span className="dc-check-text">{question}</span>
-                  </div>
+          <section className="dcw-section" aria-label="요청 내용">
+            <h2 className="dcw-section-title">요청 내용</h2>
+            <p className="dcw-utterance">{transcript}</p>
+          </section>
+
+          {groups.map((group) => (
+            <section className="dcw-section" aria-label={group.name} key={group.name}>
+              <h2 className="dcw-section-title">{group.name}</h2>
+              <div className="dcw-rows">
+                {group.fields.map((field) => (
+                  <ResolvableFieldRow
+                    requestId={requestId}
+                    field={field}
+                    draft={getIntakeFieldDraft(resolutions, requestId, field.key)}
+                    onAction={onResolutionAction}
+                    key={`${requestId}-${field.key}`}
+                  />
                 ))}
               </div>
-            </div>
-          ) : null}
-
-          {needs ? (
-            <div className="dc-needs">
-              <span className="dc-needs-label">남은 확인</span>
-              <span className="dc-needs-text">{needs}</span>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="dc-divider" aria-hidden="true" />
-
-        <div className="dc-detail-right">
-          {groups.map((group) => (
-            <div className="dc-group" key={group.name}>
-              <span className="dc-group-name">{group.name}</span>
-              {group.fields.map((field) => (
-                <ResolvableFieldRow
-                  requestId={requestId}
-                  field={field}
-                  draft={getIntakeFieldDraft(
-                    resolutions,
-                    requestId,
-                    field.key,
-                  )}
-                  onAction={onResolutionAction}
-                  key={`${requestId}-${field.key}`}
-                />
-              ))}
-            </div>
+            </section>
           ))}
+
+          {remainingQuestions.length > 0 ? (
+            <section className="dcw-section" aria-label="함께 확인해 주세요">
+              <h2 className="dcw-section-title">함께 확인해 주세요</h2>
+              <div className="dcw-rows">
+                {remainingQuestions.map((question, index) => (
+                  <p className="dcw-quiet" key={`q-${index}`}>
+                    {question}
+                  </p>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </div>
 
-      <div className="dc-actionbar">
-        <span className="dc-actionbar-note">
-          AI는 후보와 근거까지만 제시합니다. 최종 확정은 담당자가 합니다.
-        </span>
-        <span className="dc-actionbar-provider">분석 · {providerLabel}</span>
-        <button type="button" className="dc-btn-ghost" onClick={onReanalyze}>
-          내용 수정하고 다시 분석
-        </button>
-        <button type="button" className="dc-btn-primary" disabled>
-          접수카드 확정
-        </button>
+      <div className="dcw-cta">
+        <div className="dcw-cta-text">
+          <span className="dcw-cta-helper">
+            저장 전 미리보기예요. AI는 후보와 근거까지만 제시합니다.
+          </span>
+          <span className="dcw-cta-note">
+            미리보기는 저장되지 않아 접수할 수 없어요.
+          </span>
+        </div>
+        <div className="dcw-cta-actions">
+          <button type="button" className="dcw-btn-ghost" onClick={onReanalyze}>
+            내용 수정하고 다시 분석
+          </button>
+          <button type="button" className="dcw-btn-primary" disabled>
+            접수 확정
+          </button>
+        </div>
       </div>
     </main>
   );
