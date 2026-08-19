@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AddressInput } from "@/components/guardian/ui/AddressInput";
 import { BirthDateInput } from "@/components/guardian/ui/BirthDateInput";
 import { PhoneInput } from "@/components/guardian/ui/PhoneInput";
 import { CheckIcon, ChevronLeftIcon } from "@/components/guardian/ui/Icons";
@@ -170,16 +171,10 @@ export function ApplicationForm() {
 
               <BirthDateInput value={form.birth} onChange={(value) => set("birth", value, "birth")} error={errors.birth} />
 
-              <div>
-                <label htmlFor="f-region" className="field-label">거주 지역</label>
-                <input
-                  id="f-region"
-                  className="input"
-                  value={form.region}
-                  onChange={(event) => set("region", event.target.value)}
-                  placeholder="예: 나주시 금천면"
-                />
-              </div>
+              <AddressInput
+                value={form.region}
+                onChange={(value) => set("region", value)}
+              />
 
               <div>
                 <span className="field-label">보호자와의 관계</span>
