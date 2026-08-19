@@ -7,6 +7,13 @@ import type {
   IntakeFieldResolutionAction,
   ResolutionCandidate,
 } from "@/lib/ui/intakeFieldResolution";
+import { pickerKindForField } from "@/lib/ui/fieldPickers";
+import {
+  DateFieldPicker,
+  DepartmentFieldPicker,
+  TimeFieldPicker,
+  type PickerCandidate,
+} from "./FieldPickers";
 
 export interface ResolvableField {
   key: string;
@@ -47,17 +54,37 @@ const UNRESOLVED_TEXT = "아직 확인되지 않았어요";
 
 /** 필드별 입력 행동 라벨 — CTA만 읽어도 다음 행동을 알 수 있게 한다. */
 const ENTRY_ACTION_LABELS: Record<string, string> = {
-  date: "날짜 입력",
-  time: "시간 입력",
+  date: "날짜 선택",
+  time: "시간 선택",
   hospital: "병원 입력",
-  dept: "진료과 입력",
-  department: "진료과 입력",
+  dept: "진료과 선택",
+  department: "진료과 선택",
   target: "대상자 입력",
   birth: "생년월일 입력",
 };
 
 export function entryActionLabel(fieldKey: string): string {
   return ENTRY_ACTION_LABELS[fieldKey] ?? "입력";
+}
+
+/**
+ * 필드의 시각 상태 — CONFIRMED / CANDIDATE / UNRESOLVED.
+ *
+ * 병원처럼 아직 structured candidate 계약이 없는 필드도 이 세 상태로
+ * 그릴 수 있게 분리해 둔다. 후보(candidate)는 **구조화된 값이 실제로
+ * 존재할 때만** 성립한다 — confirm question 자연어에서 값을 parsing해
+ * 후보를 만들지 않는다.
+ */
+export type FieldVisualState = "confirmed" | "candidate" | "unresolved";
+
+export function fieldVisualState(
+  status: EvidenceStatus,
+  hasValue: boolean,
+  humanResolved: boolean,
+): FieldVisualState {
+  if (humanResolved || status === "CONFIRMED_BY_INPUT") return "confirmed";
+  if (hasValue) return "candidate";
+  return "unresolved";
 }
 
 export function ResolvableFieldRow({
@@ -69,6 +96,8 @@ export function ResolvableFieldRow({
   verifyBusy,
 }: ResolvableFieldRowProps) {
   const [evOpen, setEvOpen] = useState(false);
+  // picker가 있는 필드에서 자유 입력으로 내려가는 fallback 스위치.
+  const [manualEntry, setManualEntry] = useState(false);
   const inputId = useId();
   const candidateName = useId();
   const inferred = field.status === "INFERRED";
@@ -88,6 +117,11 @@ export function ResolvableFieldRow({
   const unresolvedNow = needs && !resolved;
   const missingValue = field.display === "확인 필요";
   const displayedValue = resolved?.value ?? field.display;
+  const visualState = fieldVisualState(
+    field.status,
+    !missingValue || Boolean(resolved),
+    Boolean(resolved),
+  );
   const humanLabel =
     resolved?.status === "accepted"
       ? "담당자가 선택함"
@@ -109,8 +143,116 @@ export function ResolvableFieldRow({
     dispatch({ type: "beginEdit", value: current });
   };
 
+  // 편집이 끝나면(적용·확인·취소 어느 경로든) fallback 스위치를 되돌린다.
+  // effect가 아니라 렌더 중 조정 — 닫힌 다음 편집에서 picker가 다시 기본이 된다.
+  const [wasEditing, setWasEditing] = useState(editing);
+  if (wasEditing !== editing) {
+    setWasEditing(editing);
+    if (!editing) setManualEntry(false);
+  }
+
+  const pickerKind = pickerKindForField(field.key);
+  const pickerOpen = editing && pickerKind !== null && !manualEntry;
+
+  /** picker에서 새로 고른 값 — 기존 편집 적용과 같은 경로로 보낸다. */
+  const confirmPicked = (value: string) => {
+    if (onVerify) {
+      onVerify(value);
+      return;
+    }
+    dispatch({ type: "editChanged", value });
+    dispatch({ type: "applyEdit" });
+  };
+
+  /** picker의 후보 확인 — row의 [이 값 확인함]과 같은 의미다. */
+  const confirmCandidate = (value: string) => {
+    if (onVerify) {
+      onVerify(value);
+      return;
+    }
+    dispatch({ type: "accept", value });
+  };
+
+  // AI가 이미 뽑아 둔 단일 값이 있으면 picker가 확인 단계를 먼저 보여준다.
+  // 복수 후보 필드(병원·대상자)는 picker가 없으므로 여기 오지 않는다.
+  const pickerCandidate: PickerCandidate | null =
+    !resolved && (inferred || needs) && canAccept && !hasMultipleCandidates
+      ? { value: acceptValue, note: field.sub ?? null }
+      : null;
+
+  const pickerInitialValue =
+    resolved?.value ?? (missingValue ? null : field.display);
+
+  const renderPicker = () => {
+    const shared = {
+      fieldLabel: field.label,
+      candidate: pickerCandidate,
+      initialValue: pickerInitialValue,
+      verifyMode: Boolean(onVerify),
+      busy: verifyBusy,
+      onCancel: () => dispatch({ type: "cancelEdit" }),
+      onManualEntry: () => setManualEntry(true),
+    };
+    if (pickerKind === "date") {
+      return (
+        <DateFieldPicker
+          {...shared}
+          onConfirm={(value) =>
+            pickerCandidate?.value === value
+              ? confirmCandidate(value)
+              : confirmPicked(value)
+          }
+        />
+      );
+    }
+    if (pickerKind === "time") {
+      return (
+        <TimeFieldPicker
+          {...shared}
+          onConfirm={(value) =>
+            pickerCandidate?.value === value
+              ? confirmCandidate(value)
+              : confirmPicked(value)
+          }
+        />
+      );
+    }
+    return (
+      <DepartmentFieldPicker
+        {...shared}
+        onConfirm={(value) =>
+          pickerCandidate?.value === value
+            ? confirmCandidate(value)
+            : confirmPicked(value)
+        }
+      />
+    );
+  };
+
+  if (pickerOpen) {
+    // picker는 popover로 띄운다 — row 자체는 현재 값을 그대로 보여주고
+    // 높이도 유지한다. 취소·확인은 popover 안에서 처리한다.
+    return (
+      <div className={`dcw-row is-${visualState} is-picking`}>
+        <div className="dcw-row-main">
+          <span className="dcw-row-label">{field.label}</span>
+          <span className="dcw-row-value-wrap">
+            <span
+              className={`dcw-row-value${unresolvedNow && missingValue ? " is-empty" : ""}`}
+            >
+              {unresolvedNow && missingValue ? UNRESOLVED_TEXT : displayedValue}
+            </span>
+          </span>
+        </div>
+        {renderPicker()}
+      </div>
+    );
+  }
+
   return (
-    <div className={`dcw-row${unresolvedNow ? " is-unresolved" : ""}`}>
+    <div
+      className={`dcw-row is-${visualState}${unresolvedNow ? " is-unresolved" : ""}`}
+    >
       {editing ? (
         <div className="dcw-row-main">
           <span className="dcw-row-label">{field.label}</span>

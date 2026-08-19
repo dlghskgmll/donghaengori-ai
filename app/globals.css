@@ -4450,6 +4450,304 @@ button:disabled {
   color: #78716c;
 }
 
+/* ---------- 필드 picker (popover) ---------- */
+/* row 높이를 유지한 채 값 영역 아래로 popover를 띄운다. */
+.dcw-row.is-picking {
+  position: relative;
+}
+
+.dcw-picker-anchor {
+  position: relative;
+  height: 0;
+}
+
+.dcw-picker {
+  position: absolute;
+  top: 6px;
+  left: 100px;
+  z-index: 40;
+  width: 330px;
+  max-width: calc(100% - 100px);
+  padding: 14px;
+  background: #fffdfb;
+  border: 1px solid #e0ddd9;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(31, 29, 26, 0.08);
+}
+
+.dcw-picker-caption {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #78716c;
+}
+
+/* 후보 확인 단계 */
+.dcw-picker-candidate-value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f1d1a;
+}
+
+.dcw-picker-candidate-note {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #78716c;
+}
+
+/* chips — 선택 상태는 색만이 아니라 테두리·굵기·체크로 함께 표시한다. */
+.dcw-picker-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid #d6d3d1;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #44403c;
+  cursor: pointer;
+}
+
+.dcw-picker-chip:hover {
+  border-color: #a8a29e;
+}
+
+.dcw-picker-chip[aria-pressed="true"],
+.dcw-picker-chip.is-selected {
+  border-color: #f94704;
+  background: #fff7ed;
+  font-weight: 700;
+  color: #c2410c;
+}
+
+.dcw-picker-chip[aria-pressed="true"]::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+
+.dcw-picker-chip-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #a8a29e;
+}
+
+.dcw-picker-quick {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* 달력 */
+.dcw-picker-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dcw-picker-cal-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1f1d1a;
+}
+
+.dcw-picker-nav {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #e0ddd9;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1;
+  color: #57534e;
+  cursor: pointer;
+}
+
+.dcw-picker-nav:hover {
+  background: #f5f4f1;
+}
+
+.dcw-picker-cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dcw-picker-cal-row.is-weekdays span {
+  padding: 4px 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: #a8a29e;
+}
+
+.dcw-picker-day {
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1f1d1a;
+  cursor: pointer;
+}
+
+.dcw-picker-day:hover {
+  background: #f5f4f1;
+}
+
+.dcw-picker-day.is-today {
+  border-color: #d6d3d1;
+  font-weight: 700;
+}
+
+.dcw-picker-day.is-selected {
+  border-color: #f94704;
+  background: #f94704;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 시간·진료과 그룹 */
+.dcw-picker-slot-group {
+  margin-bottom: 10px;
+}
+
+.dcw-picker-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* 진료과 검색 combobox */
+.dcw-picker-search {
+  margin-bottom: 10px;
+}
+
+.dcw-picker-search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid #d6d3d1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #1f1d1a;
+}
+
+.dcw-picker-search-input:focus {
+  outline: none;
+  border-color: #f94704;
+}
+
+.dcw-picker-options {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 168px;
+  overflow-y: auto;
+  border: 1px solid #e0ddd9;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dcw-picker-option {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #1f1d1a;
+  cursor: pointer;
+}
+
+.dcw-picker-option:hover,
+.dcw-picker-option.is-active {
+  background: #fff7ed;
+  font-weight: 600;
+}
+
+.dcw-picker-option-empty {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #78716c;
+}
+
+/* footer */
+.dcw-picker-selected {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #57534e;
+}
+
+.dcw-picker-selected strong {
+  color: #1f1d1a;
+}
+
+.dcw-picker-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dcw-picker-footer-gap {
+  flex: 1;
+}
+
+.dcw-picker-btn {
+  padding: 6px 12px;
+  border: 1px solid #d6d3d1;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #44403c;
+  cursor: pointer;
+}
+
+.dcw-picker-btn:hover:not(:disabled) {
+  background: #f5f4f1;
+}
+
+.dcw-picker-btn.is-primary,
+.dcw-picker-btn.is-verify {
+  border-color: #f94704;
+  background: #f94704;
+  color: #fff;
+}
+
+.dcw-picker-btn.is-primary:hover:not(:disabled),
+.dcw-picker-btn.is-verify:hover:not(:disabled) {
+  background: #d93c02;
+}
+
+.dcw-picker-btn.is-quiet {
+  border-color: transparent;
+  color: #78716c;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dcw-picker-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dcw-picker :focus-visible {
+  outline: 2px solid #f94704;
+  outline-offset: 1px;
+}
+
 /* ---------- 활동 기록 timeline ---------- */
 .dcw-timeline {
   margin-top: 10px;
