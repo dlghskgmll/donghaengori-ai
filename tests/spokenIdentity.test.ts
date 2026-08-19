@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { toSavedIntakeDetail } from "../lib/ai/savedIntakeView";
+import {
+  acceptLabelFor,
+  isReadOnlyField,
+  verifyFieldFor,
+} from "../lib/ui/intakeFinalization";
 
 // 미등록 번호로 걸려온 통화는 앞에서 "성함과 사시는 읍면동을 말씀해 주세요"
 // 로 20초를 따로 쓴다. 백엔드는 그 답을 카드의 spoken_name·spoken_region 으로
@@ -82,5 +87,39 @@ describe("말한 성함·주소", () => {
       }) as never,
     );
     expect(view.fields.some((f) => f.key === "spoken_name")).toBe(false);
+  });
+});
+
+// ── 들은 이름을 대상자로 올리는 경로 ──────────────────────────
+//
+// 화면에 '말한 성함: 조예원' 이 떠도 대상자는 '신규 대상자(미등록 번호)'
+// 그대로였다. 그 줄의 버튼이 로컬에서 자기 줄만 확인 표시하고 끝나서,
+// 복지사는 이름을 눈으로 읽고 대상자 칸에 손으로 다시 옮겨 적어야 했다.
+
+describe("말한 성함 → 대상자", () => {
+  it("말한 성함의 확인은 target 으로 나간다", () => {
+    expect(verifyFieldFor("spoken_name")).toBe("target");
+    expect(acceptLabelFor("spoken_name")).toBe("대상자로 확인");
+  });
+
+  it("보통 항목은 자기 자신으로 나간다", () => {
+    for (const key of ["target", "hospital", "dept", "date", "time"]) {
+      expect(verifyFieldFor(key)).toBe(key);
+      expect(acceptLabelFor(key)).toBeUndefined();
+    }
+  });
+
+  it("서버가 받지 않는 항목에는 확인 버튼을 주지 않는다", () => {
+    // 눌러도 422 만 나고 왜 안 되는지 알 방법이 없다.
+    expect(verifyFieldFor("birth")).toBeNull();
+    expect(verifyFieldFor("spoken_region")).toBeNull();
+  });
+
+  it("말한 주소는 읽기 전용이다", () => {
+    // 카드에 채울 칸이 없다. 로컬로만 도는 버튼을 남기면 눌러서 확인됨으로
+    // 보이는데 서버는 모르는 상태가 된다.
+    expect(isReadOnlyField("spoken_region")).toBe(true);
+    expect(isReadOnlyField("spoken_name")).toBe(false);
+    expect(isReadOnlyField("target")).toBe(false);
   });
 });

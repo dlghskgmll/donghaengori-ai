@@ -14,8 +14,10 @@ import {
   type ResolvableField,
 } from "./ResolvableFieldRow";
 import {
+  acceptLabelFor,
   isAccompanimentComplete,
-  isVerifiableField,
+  isReadOnlyField,
+  verifyFieldFor,
   type IntakeAuditState,
 } from "@/lib/ui/intakeFinalization";
 import {
@@ -167,11 +169,17 @@ export function SavedIntakeDetail({
       onAction={onResolutionAction}
       // 서버가 받는 항목에만 확인 버튼을 준다 — 받지 않는 항목에 그려 두면
       // 눌러도 422만 나고 왜 안 되는지 알 방법이 없다.
-      onVerify={
-        onVerify && isVerifiableField(field.key)
-          ? (value) => onVerify(field.key, value)
-          : undefined
-      }
+      //
+      // **'말한 성함'은 예외다.** 그 줄 자체는 서버가 받지 않지만, 들은
+      // 이름을 대상자로 올리는 것이 복지사가 그 줄을 보고 할 일 그 자체다.
+      // 그래서 target 으로 보낸다 — 그러지 않으면 이름을 눈으로 읽고 대상자
+      // 칸에 손으로 다시 옮겨 적어야 한다.
+      onVerify={(() => {
+        const to = verifyFieldFor(field.key);
+        return onVerify && to ? (value: string) => onVerify(to, value) : undefined;
+      })()}
+      acceptLabel={acceptLabelFor(field.key)}
+      readOnly={isReadOnlyField(field.key)}
       verifyBusy={confirmBusy}
       key={`${requestId}-${field.key}`}
     />

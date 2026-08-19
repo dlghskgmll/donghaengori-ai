@@ -41,6 +41,21 @@ interface ResolvableFieldRowProps {
    */
   onVerify?: (value: string) => void;
   verifyBusy?: boolean;
+  /**
+   * 확인 버튼 문구를 바꾼다.
+   *
+   * '말한 성함' 처럼 **그 줄이 아니라 다른 항목을 채우는** 경우에 쓴다.
+   * 기본 문구("이 값 확인함")로는 무엇이 확인되는지 알 수 없다.
+   */
+  acceptLabel?: string;
+  /**
+   * 확인·수정 버튼을 아예 감춘다.
+   *
+   * 서버에 보낼 곳이 없는 읽기 전용 항목에 쓴다. 로컬 '적용'만 되는 버튼을
+   * 남겨 두면 눌러서 확인됨으로 보이는데 서버는 모르는 상태가 된다 —
+   * 화면만 풀리고 게이트는 그대로다.
+   */
+  readOnly?: boolean;
 }
 
 type LocalResolutionAction = IntakeFieldResolutionAction extends infer Action
@@ -94,6 +109,8 @@ export function ResolvableFieldRow({
   onAction,
   onVerify,
   verifyBusy,
+  acceptLabel,
+  readOnly = false,
 }: ResolvableFieldRowProps) {
   const [evOpen, setEvOpen] = useState(false);
   // picker가 있는 필드에서 자유 입력으로 내려가는 fallback 스위치.
@@ -112,7 +129,8 @@ export function ResolvableFieldRow({
   const acceptValue = selectedCandidate ?? field.display;
   const canAccept =
     acceptValue.trim().length > 0 && acceptValue !== "확인 필요";
-  const actionable = field.editable && (inferred || needs || resolved !== null);
+  const actionable =
+    !readOnly && field.editable && (inferred || needs || resolved !== null);
   const editing = draft.editValue !== null;
   const unresolvedNow = needs && !resolved;
   const missingValue = field.display === "확인 필요";
@@ -343,7 +361,7 @@ export function ResolvableFieldRow({
                     {onVerify
                       ? verifyBusy
                         ? "반영 중…"
-                        : "이 값 확인함"
+                        : acceptLabel ?? "이 값 확인함"
                       : "이 값 사용"}
                   </button>
                 ) : null}
