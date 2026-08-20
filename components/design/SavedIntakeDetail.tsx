@@ -60,7 +60,16 @@ function toResolvableField(
     display: field.value ?? "확인 필요",
     status: field.status,
     evidence: field.evidence,
-    sub: field.spoken ? `어르신 표현: ‘${field.spoken}’` : undefined,
+    // '요청 내용' 은 확인 버튼이 없다 — 서버 verify 가 받지 않는 항목이고,
+    // 눌러서 없앨 것도 아니다. 그런데 게이트는 막고 있어서, 안내가 없으면
+    // 복지사에게는 확정할 방법이 없는 막다른 길로 보인다. 무엇을 해야
+    // 열리는지 그 자리에 적는다.
+    sub:
+      field.key === "request"
+        ? "직접 통화해 확인한 뒤, 아래 ‘확인 없이 접수’에서 사유를 남기고 접수하세요."
+        : field.spoken
+          ? `어르신 표현: ‘${field.spoken}’`
+          : undefined,
     editable,
     confirmationQuestion: findFieldConfirmationQuestion(field.key, questions),
   };
