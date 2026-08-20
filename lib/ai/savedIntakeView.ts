@@ -74,6 +74,8 @@ export interface SavedIntakeDetailView {
   notes: string[];
   /** 외출 전 참고 — 기상·대기. 서버가 못 채우면 빈 배열이다. */
   outingChecklist: string[];
+  /** 기존 흐름이 감당하지 못하는 요청 유형. '기존재방문'·null 이면 평소와 같다. */
+  requestType: string | null;
   hospitalDowngraded: boolean;
   /** 서버가 고른 동행 지원 수준. 확정할 때 그대로 되돌려 보낸다 —
    *  화면에서 만든 값을 보내면 직원이 눌러 본 것이 확정 내용이 된다. */
@@ -122,6 +124,8 @@ export function toSavedIntakeSummary(row: TeamIntakeRow): SavedIntakeSummary {
 }
 
 const FIELD_ORDER: Array<{ key: string; label: string }> = [
+  // 새 유형에서만 서는 칸. 무엇을 원하는지가 날짜·병원보다 먼저다.
+  { key: "request", label: "요청 내용" },
   { key: "date", label: "방문일" },
   { key: "time", label: "예약 시간" },
   { key: "hospital", label: "병원" },
@@ -138,7 +142,7 @@ const FIELD_ORDER: Array<{ key: string; label: string }> = [
 ];
 
 /** 값이 있을 때만 줄을 만드는 항목. */
-const OPTIONAL_KEYS = new Set(["spoken_name", "spoken_region"]);
+const OPTIONAL_KEYS = new Set(["spoken_name", "spoken_region", "request"]);
 
 /**
  * 생년월일은 보호자 웹 신청서가 필수로 받는 값이지만(elder.birthDate),
@@ -283,6 +287,7 @@ export function toSavedIntakeDetail(
     urgentConfidence: urgent ? (detail.urgent_confident ?? null) : null,
     fields,
     outingChecklist: card?.outing_checklist ?? [],
+    requestType: card?.request_type?.trim() || null,
     confirmQuestions: card?.confirm_questions ?? [],
     notes,
     hospitalDowngraded: hospital.downgraded,

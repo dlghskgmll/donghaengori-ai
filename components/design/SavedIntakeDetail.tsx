@@ -16,6 +16,7 @@ import {
 import {
   acceptLabelFor,
   isAccompanimentComplete,
+  isNewRequestType,
   isReadOnlyField,
   verifyFieldFor,
   type IntakeAuditState,
@@ -208,6 +209,17 @@ export function SavedIntakeDetail({
             {/* 확정된 접수는 편집이 잠기므로 확인 안내를 반복하지 않는다. */}
             {!detail.confirmed && pendingCount > 0 ? (
               <p className="dcw-head-attn">확인할 정보 {pendingCount}개 있어요</p>
+            ) : null}
+
+            {/* 기존 흐름이 감당하지 못하는 요청. **병원·진료과가 빈 것은 못
+                찾은 게 아니라 만들지 않은 것이다** — 복지사가 그걸 알고 봐야
+                한다. 모르고 보면 "AI가 실패했네" 로 읽히고, 빈 칸을 직접
+                채워 넣게 된다. */}
+            {isNewRequestType(detail.requestType) ? (
+              <p className="dcw-head-new" role="status">
+                새로운 유형의 요청이에요 — 어떤 도움이 필요하신지 직접 확인해
+                주세요. 병원과 진료과는 <strong>추측하지 않고 비워 두었어요.</strong>
+              </p>
             ) : null}
           </header>
 

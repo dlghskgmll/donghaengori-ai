@@ -47,6 +47,10 @@ const TeamSavedCardSchema = z
     // 외출 전 참고 — 기상·대기 정보. 외부 API 가 미연동이거나 느리면
     // 서버가 조용히 빈 배열로 둔다(접수를 막지 않는다).
     outing_checklist: z.array(z.string()).default([]),
+    // 기존 흐름이 감당하지 못하는 요청. '기존재방문' 이나 없으면 지금 그대로다.
+    // 새 유형에서 병원·진료과가 비는 것은 **못 찾은 게 아니라 만들지 않은
+    // 것이다** — 화면이 임의로 채우면 안 된다(docs/FRONTEND.md).
+    request_type: z.string().nullable().optional(),
     requester: z.string().optional(),
     proxy_relation: z.string().nullable().optional(),
   })
