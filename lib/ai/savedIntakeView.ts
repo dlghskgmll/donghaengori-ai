@@ -76,6 +76,13 @@ export interface SavedIntakeDetailView {
   outingChecklist: string[];
   /** 기존 흐름이 감당하지 못하는 요청 유형. '기존재방문'·null 이면 평소와 같다. */
   requestType: string | null;
+  /**
+   * 등록된 케어 프로필에서 그대로 오는 사실들.
+   *
+   * 확신도 배지를 붙이지 않는다 — AI 가 추정한 값이 아니라 기관이 등록해 둔
+   * 것이다. '확인 필요' 를 달면 복지사가 자기 기관 기록을 의심하게 된다.
+   */
+  profileFacts: Array<{ label: string; value: string }>;
   hospitalDowngraded: boolean;
   /** 서버가 고른 동행 지원 수준. 확정할 때 그대로 되돌려 보낸다 —
    *  화면에서 만든 값을 보내면 직원이 눌러 본 것이 확정 내용이 된다. */
@@ -140,6 +147,42 @@ const FIELD_ORDER: Array<{ key: string; label: string }> = [
   { key: "spoken_region", label: "말한 주소" },
   { key: "birth", label: "생년월일" },
 ];
+
+/**
+ * 카드에 실려 오는 케어 프로필 사실을 화면 줄로 바꾼다.
+ *
+ * **모시러 갈 곳이 먼저다.** 동행 매니저가 제일 먼저 알아야 하는 것이 어디로
+ * 가느냐다. 백엔드는 이 값들을 계속 보내고 있었는데 화면이 하나도 그리지
+ * 않아, 어르신 주소가 어디에도 안 나왔다.
+ */
+export function elderProfileFacts(
+  card: { pickup?: string | null; mobility?: string | null;
+          caregiver?: string | null;
+          guardian?: { name?: string | null; relation?: string | null;
+                       phone?: string | null; available?: string | null } | null }
+    | null | undefined,
+): Array<{ label: string; value: string }> {
+  const out: Array<{ label: string; value: string }> = [];
+  const push = (label: string, value: string | null | undefined) => {
+    const v = value?.trim();
+    if (v) out.push({ label, value: v });
+  };
+
+  push("모시러 갈 곳", card?.pickup);
+  push("이동 지원", card?.mobility);
+  push("생활지원사", card?.caregiver);
+
+  const g = card?.guardian;
+  if (g) {
+    // 이름·관계·연락처·연락 가능 시간을 한 줄로 합친다. 매니저가 전화를
+    // 걸어야 하는 값이라 연락처를 가리지 않는다 — 이 화면은 로그인과
+    // 조회 권한을 이미 지난 뒤다.
+    const 앞 = [g.name?.trim(), g.relation?.trim()].filter(Boolean).join(" · ");
+    const 뒤 = [g.phone?.trim(), g.available?.trim()].filter(Boolean).join(" · ");
+    push("보호자", [앞, 뒤].filter(Boolean).join(" · "));
+  }
+  return out;
+}
 
 /** 값이 있을 때만 줄을 만드는 항목. */
 const OPTIONAL_KEYS = new Set(["spoken_name", "spoken_region", "request"]);
@@ -288,6 +331,7 @@ export function toSavedIntakeDetail(
     fields,
     outingChecklist: card?.outing_checklist ?? [],
     requestType: card?.request_type?.trim() || null,
+    profileFacts: elderProfileFacts(card),
     confirmQuestions: card?.confirm_questions ?? [],
     notes,
     hospitalDowngraded: hospital.downgraded,

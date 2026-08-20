@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { toSavedIntakeDetail } from "../lib/ai/savedIntakeView";
+import {
+  elderProfileFacts,
+  toSavedIntakeDetail,
+} from "../lib/ai/savedIntakeView";
 import {
   acceptLabelFor,
   isNewRequestType,
@@ -238,5 +241,44 @@ describe("새로운 유형의 요청", () => {
       card: { raw_utterance: "모레 정형외과 가야겄어", request_type: "기존재방문" },
     } as never);
     expect(view.fields.some((f) => f.key === "request")).toBe(false);
+  });
+});
+
+// ── 어르신 정보에 주소가 없었다 ──────────────────────────
+//
+// 백엔드는 카드에 pickup(모시러 갈 곳)·mobility·caregiver·guardian 을 계속
+// 보내고 있었는데 화면이 하나도 그리지 않았다. 동행 매니저가 제일 먼저
+// 알아야 하는 "어디로 가느냐" 가 어디에도 없었다.
+
+describe("어르신 프로필 사실", () => {
+  it("모시러 갈 곳이 맨 앞이다", () => {
+    const rows = elderProfileFacts({
+      pickup: "전남 고흥군 ○○면",
+      mobility: "거동 불편(보행기 사용)",
+      caregiver: "김복지 생활지원사",
+      guardian: {
+        name: "이지현", relation: "딸",
+        phone: "010-9876-5432", available: "평일 18시 이후",
+      },
+    });
+    expect(rows[0]).toEqual({ label: "모시러 갈 곳", value: "전남 고흥군 ○○면" });
+    expect(rows.map((r) => r.label)).toEqual([
+      "모시러 갈 곳", "이동 지원", "생활지원사", "보호자",
+    ]);
+    // 매니저가 걸어야 하는 번호라 가리지 않는다.
+    expect(rows[3].value).toBe("이지현 · 딸 · 010-9876-5432 · 평일 18시 이후");
+  });
+
+  it("없는 값은 줄을 만들지 않는다", () => {
+    expect(elderProfileFacts({ pickup: "전남 고흥군 ○○면" })).toEqual([
+      { label: "모시러 갈 곳", value: "전남 고흥군 ○○면" },
+    ]);
+    expect(elderProfileFacts({ pickup: "  ", mobility: null })).toEqual([]);
+    expect(elderProfileFacts(null)).toEqual([]);
+  });
+
+  it("보호자 정보가 일부만 있어도 있는 것만 잇는다", () => {
+    const rows = elderProfileFacts({ guardian: { name: "이지현", relation: "딸" } });
+    expect(rows).toEqual([{ label: "보호자", value: "이지현 · 딸" }]);
   });
 });

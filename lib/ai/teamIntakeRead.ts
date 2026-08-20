@@ -51,6 +51,21 @@ const TeamSavedCardSchema = z
     // 새 유형에서 병원·진료과가 비는 것은 **못 찾은 게 아니라 만들지 않은
     // 것이다** — 화면이 임의로 채우면 안 된다(docs/FRONTEND.md).
     request_type: z.string().nullable().optional(),
+    // 등록된 케어 프로필에서 그대로 오는 값들. 확신도 배지가 없다 —
+    // AI 가 추정한 것이 아니라 기관이 등록해 둔 사실이다.
+    pickup: z.string().nullable().optional(),
+    mobility: z.string().nullable().optional(),
+    caregiver: z.string().nullable().optional(),
+    guardian: z
+      .object({
+        name: z.string().nullable().optional(),
+        relation: z.string().nullable().optional(),
+        phone: z.string().nullable().optional(),
+        available: z.string().nullable().optional(),
+      })
+      .loose()
+      .nullable()
+      .optional(),
     requester: z.string().optional(),
     proxy_relation: z.string().nullable().optional(),
   })

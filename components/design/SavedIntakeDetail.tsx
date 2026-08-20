@@ -249,6 +249,21 @@ export function SavedIntakeDetail({
                 </div>
               ) : null}
               {elderFields.map(renderField)}
+
+              {/* 등록된 케어 프로필에서 그대로 오는 사실들. 확신도 배지를
+                  붙이지 않는다 — AI 가 추정한 값이 아니라 기관이 등록해 둔
+                  것이다. '확인 필요' 를 달면 복지사가 자기 기관 기록을
+                  의심하게 된다. */}
+              {detail.profileFacts.map((fact) => (
+                <div className="dcw-row" key={`fact-${fact.label}`}>
+                  <div className="dcw-row-main">
+                    <span className="dcw-row-label">{fact.label}</span>
+                    <span className="dcw-row-value-wrap">
+                      <span className="dcw-row-value">{fact.value}</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
