@@ -70,6 +70,41 @@ const TeamSavedCardSchema = z
       .default([]),
     // 되묻기를 그만둔 이유(사람을 찾았거나 상한에 걸렸거나).
     followup_stopped: z.string().nullable().optional(),
+    // 심평원에서 조회한 병원 후보. **항상 '추정 후보'** 이고, 조회가 안 되면
+    // 빈 목록이다 — 그 사유는 병원 칸 근거에 문장으로 온다.
+    // 이력이 없어 병원을 모를 때의 거리 기준 참고 후보. lookup_candidates 와
+    // 모양이 같고 나오는 조건만 다르다 — 화면에서는 하나로 합쳐 그린다.
+    reference_candidates: z
+      .array(
+        z
+          .object({
+            name: z.string().nullable().optional(),
+            kind: z.string().nullable().optional(),
+            address: z.string().nullable().optional(),
+            phone: z.string().nullable().optional(),
+            distance_m: z.number().nullable().optional(),
+            matched_by: z.string().nullable().optional(),
+            source: z.string().nullable().optional(),
+          })
+          .loose(),
+      )
+      .default([]),
+    lookup_candidates: z
+      .array(
+        z
+          .object({
+            name: z.string().nullable().optional(),
+            kind: z.string().nullable().optional(),
+            address: z.string().nullable().optional(),
+            phone: z.string().nullable().optional(),
+            distance_m: z.number().nullable().optional(),
+            matched_by: z.string().nullable().optional(),
+            status: z.string().nullable().optional(),
+            source: z.string().nullable().optional(),
+          })
+          .loose(),
+      )
+      .default([]),
     // 등록된 케어 프로필에서 그대로 오는 값들. 확신도 배지가 없다 —
     // AI 가 추정한 것이 아니라 기관이 등록해 둔 사실이다.
     pickup: z.string().nullable().optional(),

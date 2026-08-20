@@ -58,6 +58,7 @@ function detailWithTime(
   profileFacts: [],
   followups: [],
   followupStopped: null,
+  hospitalCandidates: [],
     hospitalDowngraded: false,
     confirmed: false,
     gate: null,
