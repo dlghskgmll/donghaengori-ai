@@ -31,8 +31,16 @@ export const TeamConfirmInputSchema = z.object({
   date: z.string().min(1),
   level: z.string().min(1),
   acknowledge: z.boolean().optional(),
+  // 서버 Literal 과 같은 값이어야 한다 — 여기서 막히면 화면은 아무 말도
+  // 못 하고, 서버까지 가면 422 다. 새 유형의 정상 경로가 '직접 응대함' 이다.
   acknowledge_reason: z
-    .enum(["이미 알고 있음", "물어볼 필요 없음", "연락이 닿지 않음", "기타"])
+    .enum([
+      "직접 응대함",
+      "이미 알고 있음",
+      "물어볼 필요 없음",
+      "연락이 닿지 않음",
+      "기타",
+    ])
     .nullable()
     .optional(),
 });

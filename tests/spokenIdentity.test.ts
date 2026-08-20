@@ -3,6 +3,7 @@ import {
   elderProfileFacts,
   toSavedIntakeDetail,
 } from "../lib/ai/savedIntakeView";
+import { TeamConfirmInputSchema } from "../lib/ai/teamIntakeWrite";
 import {
   acceptLabelFor,
   isNewRequestType,
@@ -280,5 +281,31 @@ describe("어르신 프로필 사실", () => {
   it("보호자 정보가 일부만 있어도 있는 것만 잇는다", () => {
     const rows = elderProfileFacts({ guardian: { name: "이지현", relation: "딸" } });
     expect(rows).toEqual([{ label: "보호자", value: "이지현 · 딸" }]);
+  });
+});
+
+// ── 확정 사유 계약 ────────────────────────────────────────
+//
+// 새 유형(신규병원탐색 등)은 '요청 내용' 칸이 게이트를 막고 서버 verify 가
+// 그 칸을 받지 않는다. 정상 경로가 acknowledge 확정이라, 사람이 통화로
+// 처리했다는 사유가 목록에 있어야 한다.
+
+describe("확정 사유", () => {
+  it("'직접 응대함' 을 서버가 받는 값으로 보낸다", () => {
+    const ok = TeamConfirmInputSchema.safeParse({
+      hospital: "백병원", date: "2026-08-20", level: "일반",
+      acknowledge: true, acknowledge_reason: "직접 응대함",
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it("계약 밖의 사유는 화면에서 막는다", () => {
+    // 여기서 안 막으면 서버까지 가서 422 가 되고, 복지사는 왜 안 되는지
+    // 알 방법이 없다.
+    const bad = TeamConfirmInputSchema.safeParse({
+      hospital: "백병원", date: "2026-08-20", level: "일반",
+      acknowledge: true, acknowledge_reason: "그냥",
+    });
+    expect(bad.success).toBe(false);
   });
 });
