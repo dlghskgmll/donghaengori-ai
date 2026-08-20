@@ -1,0 +1,312 @@
+/* /dh — 아무 기능도 없는 데모 페이지.
+   모든 규칙을 .dh 아래로 스코프해서 globals.css나 다른 라우트에는 영향이 없다. */
+
+.dh {
+  --dh-ink: #eef2f8;
+  --dh-bg: #05070d;
+  --dh-dim: color-mix(in srgb, var(--dh-ink) 64%, transparent);
+  --dh-line: color-mix(in srgb, var(--dh-ink) 16%, transparent);
+  --dh-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* 밝은 줄기 위에서도 글자가 읽히도록 하는 후광 */
+  --dh-halo: 0 1px 16px rgba(0, 0, 0, 0.72);
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #05070d;
+  color: var(--dh-ink);
+  cursor: crosshair;
+  transition: background-color 700ms ease, color 700ms ease;
+  -webkit-font-smoothing: antialiased;
+  touch-action: none;
+}
+
+.dh-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 가장자리를 눌러 가운데 글자가 읽히게 하는 비네트 */
+.dh-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.42) 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.34), transparent 24%, transparent 76%, rgba(0, 0, 0, 0.38));
+}
+
+.dh[data-tone="light"] {
+  --dh-halo: 0 1px 16px rgba(255, 255, 255, 0.85);
+}
+
+.dh[data-tone="light"] .dh-vignette {
+  background:
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(255, 255, 255, 0.42) 100%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent 24%, transparent 76%, rgba(255, 255, 255, 0.44));
+}
+
+.dh-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(18px, 3.4vw, 52px);
+  pointer-events: none;
+}
+
+.dh-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dh-row--bottom {
+  align-items: flex-end;
+}
+
+/* 상·하단 모서리의 작은 라벨들 */
+.dh-tag {
+  text-shadow: var(--dh-halo);
+  font-family: var(--dh-mono);
+  font-size: clamp(9.5px, 1.05vw, 11.5px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dh-dim);
+  line-height: 1.7;
+  margin: 0;
+  animation: dh-fade 1.6s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dh-tag b {
+  display: block;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--dh-ink);
+}
+
+.dh-swatch {
+  text-shadow: var(--dh-halo);
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 13px;
+  border: 1px solid var(--dh-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dh-ink);
+  font-family: var(--dh-mono);
+  font-size: clamp(10px, 1.1vw, 12px);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 200ms ease, transform 200ms ease, opacity 200ms ease;
+  animation: dh-fade 1.6s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dh-swatch:hover {
+  border-color: color-mix(in srgb, var(--dh-ink) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.dh-swatch:focus-visible {
+  outline: 1px solid var(--dh-ink);
+  outline-offset: 3px;
+}
+
+.dh-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 12px currentColor;
+}
+
+/* 가운데 문구 */
+.dh-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: clamp(14px, 2vw, 22px);
+}
+
+.dh-kicker {
+  text-shadow: var(--dh-halo);
+  margin: 0;
+  font-family: var(--dh-mono);
+  font-size: clamp(10px, 1.15vw, 12.5px);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-transform: uppercase;
+  color: var(--dh-dim);
+  animation: dh-rise 1.2s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dh-title-halo {
+  filter: drop-shadow(0 2px 20px rgba(0, 0, 0, 0.55));
+}
+
+.dh[data-tone="light"] .dh-title-halo {
+  filter: drop-shadow(0 2px 20px rgba(255, 255, 255, 0.85));
+}
+
+.dh-title {
+  margin: 0;
+  font-size: clamp(2.7rem, 10vw, 7.8rem);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  background: linear-gradient(
+    100deg,
+    var(--dh-ink) 8%,
+    color-mix(in srgb, var(--dh-ink) 64%, var(--dh-bg)) 32%,
+    var(--dh-ink) 56%,
+    color-mix(in srgb, var(--dh-ink) 68%, var(--dh-bg)) 80%,
+    var(--dh-ink) 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    dh-rise 1.35s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both,
+    dh-shimmer 11s 1.6s linear infinite;
+}
+
+.dh-title span {
+  display: block;
+}
+
+.dh-sub {
+  text-shadow: var(--dh-halo);
+  margin: 0;
+  max-width: 30ch;
+  font-size: clamp(0.9rem, 1.7vw, 1.1rem);
+  line-height: 1.65;
+  color: var(--dh-dim);
+  animation: dh-rise 1.35s 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dh-quote {
+  text-shadow: var(--dh-halo);
+  min-height: 1.6em;
+  margin: 0;
+  font-size: clamp(0.82rem, 1.5vw, 0.95rem);
+  color: color-mix(in srgb, var(--dh-ink) 82%, transparent);
+  animation: dh-fade 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* 하단 좌측 조작 힌트 */
+.dh-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: dh-fade 1.6s 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dh-keys li {
+  text-shadow: var(--dh-halo);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--dh-mono);
+  font-size: clamp(9.5px, 1.05vw, 11.5px);
+  letter-spacing: 0.04em;
+  color: var(--dh-dim);
+}
+
+.dh-keys kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--dh-line);
+  border-radius: 5px;
+  font: inherit;
+  color: var(--dh-ink);
+}
+
+/* 하단 우측 HUD */
+.dh-hud {
+  text-shadow: var(--dh-halo);
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 14px;
+  margin: 0;
+  font-family: var(--dh-mono);
+  font-size: clamp(9.5px, 1.05vw, 11.5px);
+  letter-spacing: 0.06em;
+  text-align: right;
+  animation: dh-fade 1.6s 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dh-hud dt {
+  color: var(--dh-dim);
+  text-transform: uppercase;
+}
+
+.dh-hud dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--dh-ink);
+}
+
+@keyframes dh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+    filter: blur(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes dh-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dh-shimmer {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: -260% 50%;
+  }
+}
+
+@media (max-width: 640px) {
+  .dh-row--bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dh-hud {
+    text-align: left;
+    grid-template-columns: auto auto auto auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dh *,
+  .dh {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
