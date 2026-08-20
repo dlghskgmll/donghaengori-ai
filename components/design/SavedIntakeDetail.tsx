@@ -157,7 +157,6 @@ export function SavedIntakeDetail({
   // 넣으면 전화 접수마다 처리할 일이 하나 더 있는 것처럼 보인다.
   const pendingCount = fields.filter(
     (field) =>
-      field.key !== "birth" &&
       field.status === "NEEDS_CONFIRMATION" &&
       !isHumanResolved(getIntakeFieldDraft(resolutions, requestId, field.key)),
   ).length;
@@ -165,7 +164,7 @@ export function SavedIntakeDetail({
   // 말한 성함·주소는 '누구인가' 에 속한다 — 방문 정보가 아니라 어르신 쪽에
   // 붙어야 복지사가 대상자 확인을 한자리에서 한다.
   const ELDER_KEYS = new Set([
-    "target", "birth", "spoken_name", "spoken_region",
+    "target", "spoken_name", "spoken_region",
   ]);
   const visitFields = fields.filter((field) => !ELDER_KEYS.has(field.key));
   // 대상자와 생년월일은 둘 다 어르신 본인 정보라 같은 묶음으로 보여준다.
@@ -305,6 +304,39 @@ export function SavedIntakeDetail({
                     {question}
                   </p>
                 ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* 통화 중에 AI 가 되물은 질문과 어르신의 답.
+              **후속답변은 별도 녹음이라 원문에 없다** — 이 영역이 없으면
+              값이 어디서 왔는지 복지사가 확인할 방법이 아예 없다. 값만
+              바뀌어 있고 근거를 못 대면 그 값을 믿을 수 없다. */}
+          {detail.followups.length > 0 ? (
+            <section className="dcw-section" aria-label="통화 중 되물은 것">
+              <h2 className="dcw-section-title">통화 중 되물은 것</h2>
+              <div className="dcw-post">
+                {detail.followups.map((f, index) => (
+                  <div className="dcw-fu" key={`fu-${index}`}>
+                    <p className="dcw-fu-q">{f.question}</p>
+                    {/* 답이 없는 경우가 실제로 있다(무응답·전사 실패). 빈칸으로
+                        두면 "안 물어봤다" 와 "물었는데 답을 못 얻었다" 가
+                        구분되지 않는다. */}
+                    <p className="dcw-fu-a">{f.answer || "답변 없음"}</p>
+                    <p className="dcw-fu-r">
+                      {f.result
+                        ? `반영: ${f.result}`
+                        : "확인 필요 그대로 — 사회복지사가 다시 확인"}
+                      {f.at ? ` · ${f.at}` : ""}
+                    </p>
+                  </div>
+                ))}
+                {/* 왜 하나만 물었는지 답할 수 있어야 한다. */}
+                {detail.followupStopped ? (
+                  <p className="dcw-quiet">
+                    되묻기를 그만둔 이유: {detail.followupStopped}
+                  </p>
+                ) : null}
               </div>
             </section>
           ) : null}

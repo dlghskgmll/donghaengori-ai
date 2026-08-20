@@ -309,3 +309,64 @@ describe("확정 사유", () => {
     expect(bad.success).toBe(false);
   });
 });
+
+// ── 통화 중 되물은 것 ─────────────────────────────────────
+//
+// 후속답변은 별도 녹음이라 원문(raw_utterance)에 없다. 화면이 이 칸을 안
+// 그리면 값이 어디서 왔는지 복지사가 확인할 방법이 아예 없다.
+
+describe("통화 중 되물은 것", () => {
+  const 기본 = {
+    id: 11, target: "박순자", channel: "전화", status: "임시 접수",
+    created_at: "2026-08-20 10:00", confirmed: 0,
+    raw_utterance: "모레 세시에 정형외과 가야겄어",
+  };
+
+  it("질문·답·반영결과를 싣는다", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: {
+        raw_utterance: 기본.raw_utterance,
+        followups: [
+          { field: "time", question: "말씀하신 3시, 오전인가요 오후인가요?",
+            answer: "오후요", result: "15:00 [확인됨]", status: "확인됨",
+            at: "2026-08-20 10:01" },
+        ],
+      },
+    } as never);
+    expect(view.followups).toHaveLength(1);
+    expect(view.followups[0].answer).toBe("오후요");
+    expect(view.followups[0].result).toBe("15:00 [확인됨]");
+  });
+
+  it("답을 못 얻은 건도 남긴다", () => {
+    // '안 물어봤다' 와 '물었는데 답을 못 얻었다' 는 다르다.
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: {
+        raw_utterance: 기본.raw_utterance,
+        followups: [{ field: "time", question: "오전인가요 오후인가요?" }],
+        followup_stopped: "어르신이 사람을 찾으심",
+      },
+    } as never);
+    expect(view.followups[0].answer).toBeNull();
+    expect(view.followups[0].result).toBeNull();
+    expect(view.followupStopped).toBe("어르신이 사람을 찾으심");
+  });
+
+  it("질문이 없는 항목은 버린다", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: { raw_utterance: 기본.raw_utterance, followups: [{ field: "time" }] },
+    } as never);
+    expect(view.followups).toEqual([]);
+  });
+
+  it("어르신 정보에 생년월일을 만들지 않는다", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: { raw_utterance: 기본.raw_utterance, fields: {} },
+    } as never);
+    expect(view.fields.some((f) => f.key === "birth")).toBe(false);
+  });
+});
