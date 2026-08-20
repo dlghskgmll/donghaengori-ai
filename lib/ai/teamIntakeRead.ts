@@ -51,6 +51,25 @@ const TeamSavedCardSchema = z
     // 새 유형에서 병원·진료과가 비는 것은 **못 찾은 게 아니라 만들지 않은
     // 것이다** — 화면이 임의로 채우면 안 된다(docs/FRONTEND.md).
     request_type: z.string().nullable().optional(),
+    // 통화 중에 AI 가 되물은 질문과 어르신의 답. **후속답변은 별도 녹음이라
+    // 원문(raw_utterance)에 없다** — 이 칸이 없으면 값이 어디서 왔는지
+    // 복지사가 확인할 방법이 아예 없다.
+    followups: z
+      .array(
+        z
+          .object({
+            field: z.string().optional(),
+            question: z.string().optional(),
+            answer: z.string().nullable().optional(),
+            result: z.string().nullable().optional(),
+            status: z.string().nullable().optional(),
+            at: z.string().nullable().optional(),
+          })
+          .loose(),
+      )
+      .default([]),
+    // 되묻기를 그만둔 이유(사람을 찾았거나 상한에 걸렸거나).
+    followup_stopped: z.string().nullable().optional(),
     // 등록된 케어 프로필에서 그대로 오는 값들. 확신도 배지가 없다 —
     // AI 가 추정한 것이 아니라 기관이 등록해 둔 사실이다.
     pickup: z.string().nullable().optional(),

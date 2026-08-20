@@ -6014,3 +6014,31 @@ button:disabled {
   line-height: 1.55;
   color: #92400e;
 }
+
+/* 통화 중 되물은 것 — AI 질문과 어르신 답을 한 덩어리로 본다. */
+.dcw-fu {
+  padding: 10px 12px;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+}
+
+.dcw-fu-q {
+  margin: 0;
+  font-size: 13.5px;
+  color: #78716c;
+}
+
+.dcw-fu-a {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #1f1d1a;
+}
+
+.dcw-fu-r {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: #57534e;
+}
