@@ -388,6 +388,9 @@ export function RdStage() {
             <Link href="/dh" className="dh-link">
               ← 실험 No.01
             </Link>
+            <Link href="/dh/3" className="dh-link">
+              실험 No.03 →
+            </Link>
           </p>
           <button type="button" className="dh-swatch" onClick={cyclePreset}>
             <span className="dh-dot" style={{ background: preset.dot }} aria-hidden />
