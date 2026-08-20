@@ -252,7 +252,7 @@ describe("새로운 유형의 요청", () => {
 // 알아야 하는 "어디로 가느냐" 가 어디에도 없었다.
 
 describe("어르신 프로필 사실", () => {
-  it("모시러 갈 곳이 맨 앞이다", () => {
+  it("주소가 맨 앞이다", () => {
     const rows = elderProfileFacts({
       pickup: "전남 고흥군 ○○면",
       mobility: "거동 불편(보행기 사용)",
@@ -262,9 +262,9 @@ describe("어르신 프로필 사실", () => {
         phone: "010-9876-5432", available: "평일 18시 이후",
       },
     });
-    expect(rows[0]).toEqual({ label: "모시러 갈 곳", value: "전남 고흥군 ○○면" });
+    expect(rows[0]).toEqual({ label: "주소", value: "전남 고흥군 ○○면" });
     expect(rows.map((r) => r.label)).toEqual([
-      "모시러 갈 곳", "이동 지원", "생활지원사", "보호자",
+      "주소", "이동 지원", "생활지원사", "보호자",
     ]);
     // 매니저가 걸어야 하는 번호라 가리지 않는다.
     expect(rows[3].value).toBe("이지현 · 딸 · 010-9876-5432 · 평일 18시 이후");
@@ -272,7 +272,7 @@ describe("어르신 프로필 사실", () => {
 
   it("없는 값은 줄을 만들지 않는다", () => {
     expect(elderProfileFacts({ pickup: "전남 고흥군 ○○면" })).toEqual([
-      { label: "모시러 갈 곳", value: "전남 고흥군 ○○면" },
+      { label: "주소", value: "전남 고흥군 ○○면" },
     ]);
     expect(elderProfileFacts({ pickup: "  ", mobility: null })).toEqual([]);
     expect(elderProfileFacts(null)).toEqual([]);
@@ -368,5 +368,59 @@ describe("통화 중 되물은 것", () => {
       card: { raw_utterance: 기본.raw_utterance, fields: {} },
     } as never);
     expect(view.fields.some((f) => f.key === "birth")).toBe(false);
+  });
+});
+
+// ── 주변 병원 후보 ────────────────────────────────────────
+//
+// 심평원에서 조회한 후보를 백엔드가 두 경로로 준다 — 새 유형에서 조건으로
+// 찾은 것(lookup_candidates)과, 이력이 없어 거리로 찾은 것
+// (reference_candidates). 화면이 둘 다 안 그려서 "추천 병원이 안 뜬다"가 됐다.
+
+describe("주변 병원 후보", () => {
+  const 기본 = {
+    id: 21, target: "박순자", channel: "전화", status: "임시 접수",
+    created_at: "2026-08-20 10:00", confirmed: 0, raw_utterance: "낼 병원 가야 해",
+  };
+  const 한곳 = {
+    name: "광주병원", kind: "종합병원",
+    address: "광주광역시 북구 면앙로139번길 51,  (두암동)",
+    phone: "062-260-7100", distance_m: 1891.4177,
+    matched_by: "정형외과 진료과목 보유",
+  };
+
+  it("두 경로를 하나로 합쳐 싣는다", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: {
+        raw_utterance: 기본.raw_utterance,
+        lookup_candidates: [한곳],
+        reference_candidates: [{ ...한곳, name: "광주현대병원", distance_m: 850 }],
+      },
+    } as never);
+    expect(view.hospitalCandidates.map((h) => h.name))
+      .toEqual(["광주병원", "광주현대병원"]);
+  });
+
+  it("거리를 사람이 읽는 단위로 바꾼다", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: {
+        raw_utterance: 기본.raw_utterance,
+        reference_candidates: [한곳, { ...한곳, name: "가까운의원", distance_m: 850 }],
+      },
+    } as never);
+    expect(view.hospitalCandidates[0].distance).toBe("1.9km");
+    expect(view.hospitalCandidates[1].distance).toBe("850m");
+    // 주소의 겹친 공백을 정리한다 — 공공데이터에 그대로 들어 있다.
+    expect(view.hospitalCandidates[0].address).not.toContain("  ");
+  });
+
+  it("이름 없는 항목은 버리고, 없으면 빈 배열", () => {
+    const view = toSavedIntakeDetail({
+      ...기본,
+      card: { raw_utterance: 기본.raw_utterance, lookup_candidates: [{ kind: "의원" }] },
+    } as never);
+    expect(view.hospitalCandidates).toEqual([]);
   });
 });

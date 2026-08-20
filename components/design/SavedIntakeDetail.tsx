@@ -308,6 +308,38 @@ export function SavedIntakeDetail({
             </section>
           ) : null}
 
+          {/* 심평원에서 조회한 병원 후보.
+              **AI 가 고른 것이 아니다.** 검증된 목록에서 조건으로 찾은
+              기관이고, 어르신이 그곳에 다닌다는 뜻이 아니다. 그래서 값이
+              아니라 '후보' 로 그리고, 병원 칸에 자동으로 채우지 않는다 —
+              어느 곳으로 갈지는 복지사가 통화로 정한다. */}
+          {detail.hospitalCandidates.length > 0 ? (
+            <section className="dcw-section" aria-label="주변 병원 후보">
+              <h2 className="dcw-section-title">주변 병원 후보</h2>
+              <p className="dcw-quiet">
+                심평원에서 조건으로 찾은 기관이에요. 어느 곳으로 모실지는
+                어르신과 통화해서 정해 주세요.
+              </p>
+              <div className="dcw-post">
+                {detail.hospitalCandidates.map((h, index) => (
+                  <div className="dcw-cand" key={`cand-${index}`}>
+                    <p className="dcw-cand-top">
+                      <strong>{h.name}</strong>
+                      {h.kind ? <span className="dcw-cand-kind">{h.kind}</span> : null}
+                      {h.distance ? (
+                        <span className="dcw-cand-dist">{h.distance}</span>
+                      ) : null}
+                    </p>
+                    {h.address ? <p className="dcw-cand-sub">{h.address}</p> : null}
+                    <p className="dcw-cand-sub">
+                      {[h.phone, h.matchedBy].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {/* 통화 중에 AI 가 되물은 질문과 어르신의 답.
               **후속답변은 별도 녹음이라 원문에 없다** — 이 영역이 없으면
               값이 어디서 왔는지 복지사가 확인할 방법이 아예 없다. 값만

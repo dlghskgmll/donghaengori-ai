@@ -57,6 +57,17 @@ export interface SavedIntakeGate {
   blockers: SavedIntakeGateBlocker[];
 }
 
+/** 심평원에서 조회한 병원 후보 한 곳. */
+export interface SavedIntakeHospitalCandidate {
+  name: string;
+  kind: string | null;
+  address: string | null;
+  phone: string | null;
+  /** 사람이 읽는 거리 표기. 없으면 null. */
+  distance: string | null;
+  matchedBy: string | null;
+}
+
 /** 통화 중 후속질문 한 건. */
 export interface SavedIntakeFollowup {
   question: string;
@@ -89,6 +100,8 @@ export interface SavedIntakeDetailView {
   followups: SavedIntakeFollowup[];
   /** 되묻기를 그만둔 이유. 없으면 null. */
   followupStopped: string | null;
+  /** 심평원에서 조회한 병원 후보. 항상 '추정 후보' 다. */
+  hospitalCandidates: SavedIntakeHospitalCandidate[];
   /**
    * 등록된 케어 프로필에서 그대로 오는 사실들.
    *
@@ -163,9 +176,12 @@ const FIELD_ORDER: Array<{ key: string; label: string }> = [
 /**
  * 카드에 실려 오는 케어 프로필 사실을 화면 줄로 바꾼다.
  *
- * **모시러 갈 곳이 먼저다.** 동행 매니저가 제일 먼저 알아야 하는 것이 어디로
- * 가느냐다. 백엔드는 이 값들을 계속 보내고 있었는데 화면이 하나도 그리지
- * 않아, 어르신 주소가 어디에도 안 나왔다.
+ * **주소가 먼저다.** 동행 매니저가 제일 먼저 알아야 하는 것이 어디로
+ * 가느냐이고, 복지사가 어르신 정보에서 찾는 것도 주소다. 백엔드는 이
+ * 값들을 계속 보내고 있었는데 화면이 하나도 그리지 않았다.
+ *
+ * 서버는 상세주소(address)가 있으면 그것을, 없으면 읍면동까지의
+ * region 을 보낸다 — 화면은 온 값을 그대로 적는다.
  */
 export function elderProfileFacts(
   card: { pickup?: string | null; mobility?: string | null;
@@ -180,7 +196,9 @@ export function elderProfileFacts(
     if (v) out.push({ label, value: v });
   };
 
-  push("모시러 갈 곳", card?.pickup);
+  // '주소' 라고 적는다. '모시러 갈 곳' 은 매니저 관점의 말인데, 복지사가
+  // 어르신 정보에서 찾는 것은 주소다 — 찾는 이름으로 적혀 있어야 보인다.
+  push("주소", card?.pickup);
   push("이동 지원", card?.mobility);
   push("생활지원사", card?.caregiver);
 
@@ -314,6 +332,28 @@ export function toSavedIntakeDetail(
         at: f.at?.trim() || null,
       })),
     followupStopped: card?.followup_stopped?.trim() || null,
+    // 두 경로를 하나로 합친다 — 새 유형에서 조회한 것(lookup)과 이력이 없어
+    // 거리로 찾은 것(reference)은 나오는 조건만 다르고 성격이 같다.
+    // 복지사에게는 "심평원에서 찾은 후보" 하나로 보이는 것이 맞다.
+    hospitalCandidates: [
+      ...(card?.lookup_candidates ?? []),
+      ...(card?.reference_candidates ?? []),
+    ]
+      .filter((h) => (h.name ?? "").trim())
+      .map((h) => ({
+        name: (h.name ?? "").trim(),
+        kind: h.kind?.trim() || null,
+        address: h.address?.replace(/\s+/g, " ").trim() || null,
+        phone: h.phone?.trim() || null,
+        // 미터는 복지사가 읽는 단위가 아니다. 1km 넘으면 km 로 적는다.
+        distance:
+          typeof h.distance_m === "number" && Number.isFinite(h.distance_m)
+            ? h.distance_m >= 1000
+              ? `${(h.distance_m / 1000).toFixed(1)}km`
+              : `${Math.round(h.distance_m)}m`
+            : null,
+        matchedBy: h.matched_by?.trim() || null,
+      })),
     profileFacts: elderProfileFacts(card),
     confirmQuestions: card?.confirm_questions ?? [],
     notes,
