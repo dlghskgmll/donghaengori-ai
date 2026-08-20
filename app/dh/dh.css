@@ -91,6 +91,27 @@
   color: var(--dh-ink);
 }
 
+.dh-link {
+  pointer-events: auto;
+  display: block;
+  width: fit-content;
+  margin-top: 7px;
+  color: var(--dh-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--dh-line);
+  padding-bottom: 1px;
+  transition: border-color 200ms ease;
+}
+
+.dh-link:hover {
+  border-color: color-mix(in srgb, var(--dh-ink) 55%, transparent);
+}
+
+.dh-link:focus-visible {
+  outline: 1px solid var(--dh-ink);
+  outline-offset: 3px;
+}
+
 .dh-swatch {
   text-shadow: var(--dh-halo);
   pointer-events: auto;

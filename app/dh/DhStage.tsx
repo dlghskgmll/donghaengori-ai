@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Palette = {
@@ -385,6 +386,9 @@ export function DhStage() {
           <p className="dh-tag">
             <b>동행고리 연구소</b>
             쓸모없는 실험 No.01
+            <Link href="/dh/2" className="dh-link">
+              실험 No.02 →
+            </Link>
           </p>
           <button type="button" className="dh-swatch" onClick={cyclePalette}>
             <span
