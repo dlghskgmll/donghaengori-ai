@@ -55,6 +55,7 @@ function detailWithTime(
     notes: [],
   outingChecklist: [],
   requestType: null,
+  profileFacts: [],
     hospitalDowngraded: false,
     confirmed: false,
     gate: null,
